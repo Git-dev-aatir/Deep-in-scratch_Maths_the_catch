@@ -1,0 +1,53 @@
+# Ignore Datasets folder
+/Datasets/
+
+# Ignore build files
+/build/
+/bin/
+/obj/
+
+# Ignore executable files
+*.exe
+*.out
+*.o
+*.a
+*.so
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore user-specific files
+*.log
+*.tmp
+
+# Ignore IDE/editor files
+.vscode/
+.idea/
+*.code-workspace
+
+# Ignore CMake files (if using CMake)
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Ignore generated documentation
+/doc/
+
+# Ignore compiled libraries
+*.lib
+*.dll
+
+# Ignore temporary files
+*~
+*.swp
+
+# Ignore data or result files if generated
+*.csv
+*.data
+*.dat
+*.json
+
+# Ignore dependency or package manager files (if applicable)
+conan.lock
