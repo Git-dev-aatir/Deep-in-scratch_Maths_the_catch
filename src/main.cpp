@@ -1,12 +1,19 @@
 #include "../include/dataset_utils.h"
 #include <iostream>
 #include <string>
+#include <typeinfo>
 using namespace std;
+
+// #define DATASET_PATH "../Datasets/UCI-Data-Analysis/Boston Housing Dataset/Boston Housing/housing.data"
+#define DATASET_PATH_BIN "../Datasets/Boston_housing_dataset/"
 
 int main() {
 
-    Dataset<double> housing = loadDataset<double>("../Datasets/UCI-Data-Analysis/Boston Housing Dataset/Boston Housing/housing.data", 
-                                  ' ');
+    // Dataset<double> housing = loadDataset<double>(DATASET_PATH, ' ', true);
+    // saveDatasetToBinary(housing, DATASET_PATH_BIN);
+    
+    Dataset<double> housing = loadDatasetFromBinary<double>(string(DATASET_PATH_BIN)+"data.bin");
+
     // Attributes : 
     // 1. CRIM      per capita crime rate by town
     // 2. ZN        proportion of residential land zoned for lots over 
@@ -25,14 +32,40 @@ int main() {
     //              by town
     // 13. LSTAT    % lower status of the population
     // 14. MEDV     Median value of owner-occupied homes in $1000's
-    head(housing, 8);
+
+
+
+    // splitting into training and testing set 
+    Dataset<double> train_set, test_set;
+    auto result = trainTestSplit(housing, 0.2, true);
+    train_set = result.first;
+    test_set = result.second;
+
+    // splitting into features and labels 
     Dataset<double> X, y;
-    splitFeaturesAndLabels(housing, X, y);
+    auto train_split = splitFeaturesAndLabels(train_set);
+    auto X_train = train_split.first;
+    auto y_train = train_split.second;
+    auto test_split = splitFeaturesAndLabels(test_set);
+    auto X_test = test_split.first;
+    auto y_test = test_split.second;
+    printDimensions<double>(housing);
+    printDimensions<double>(X_train);
+    head(X_train); 
+    cout << endl;
+    printDimensions<double>(y_train);
+    head(y_train); 
+    cout << endl;
+    printDimensions<double>(X_test);
+    head(X_test); 
+    cout << endl;
+    printDimensions<double>(y_test);
+    head(y_test); 
+    cout << endl; 
+    // auto result = splitFeaturesAndLabels(housing);
     
     // Linear Regression     
-
-
-
+    
 
     return 0;
 }
