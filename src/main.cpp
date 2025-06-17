@@ -1,4 +1,5 @@
 #include "../include/dataset_utils.h"
+#include "../include/preprocessing.h"
 #include <iostream>
 #include <string>
 #include <typeinfo>
@@ -50,6 +51,7 @@ int main() {
     auto X_test = test_split.first;
     auto y_test = test_split.second;
     printDimensions<double>(housing);
+    cout << endl;
     printDimensions<double>(X_train);
     head(X_train); 
     cout << endl;
@@ -63,6 +65,8 @@ int main() {
     head(y_test); 
     cout << endl; 
     // auto result = splitFeaturesAndLabels(housing);
+
+    describeDataset(housing);
     
     // Linear Regression     
     

@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <regex>
@@ -145,11 +146,30 @@ void saveDatasetToCSV(const Dataset<T> &dataset, const string &outputFilename) {
 }
 
 // Function to display first 'n_rows' of the dataset
+
 template<typename T>
 void head(const Dataset<T> &dataset, int n_rows = 5) {
+    if (dataset.empty()) {
+        cout << "Dataset is empty!" << endl;
+        return;
+    }
+
+    size_t n_cols = dataset[0].size();
+
+    // Print column headers
+    cout << left;
+    for (size_t col = 0; col < n_cols; ++col) {
+        cout << setw(12) << ("Col " + to_string(col));
+    }
+    cout << endl;
+
+    // Print separator line
+    cout << string(n_cols * 12, '-') << endl;
+
+    // Print first n_rows rows
     for (const auto &row : dataset) {
         for (const auto &val : row) {
-            cout << val << "\t| ";
+            cout << setw(12) << val;
         }
         cout << endl;
         --n_rows;
@@ -159,7 +179,7 @@ void head(const Dataset<T> &dataset, int n_rows = 5) {
 
 // print dimensions of Dataset 
 template<typename T>
-void printDimensions(const vector<vector<T>>& vec) {
+void printDimensions(const Dataset<T>& vec) {
     size_t rows = vec.size();
     size_t cols = rows > 0 ? vec[0].size() : 0;
     cout << "Dimensions: [" << rows << " x " << cols << "]" << endl;
@@ -236,9 +256,6 @@ pair <Dataset<T>, Dataset<T>> trainTestSplit(Dataset<T> dataset,
     return { trainSet, testSet };
 }
 
-
-template<typename T>
-using Dataset = vector<DataRow<T>>;
 
 // Save Dataset to binary (general version for int, double)
 template<typename T>
