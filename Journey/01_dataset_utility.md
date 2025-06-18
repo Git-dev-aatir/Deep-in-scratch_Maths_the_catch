@@ -1,33 +1,27 @@
-Here’s a **unified, consistent, professional style** version of both your documentation files — blending strengths of both.
-
----
-
-## **01\_dataset\_utility.md**
-
-# 📦 **Dataset Utility Module — Documentation**
+# 📦 **Dataset Utility Module — Documentation (Updated)**
 
 ---
 
 ## **1. Overview**
 
-This module provides a **flexible and reusable utility** for handling datasets in C++ Machine Learning projects.
+This module provides a **generic, reusable, and efficient utility** for handling datasets in C++ Machine Learning or Data Processing projects.
 It offers functionality for:
 
 1. **Loading** datasets from `.csv`, `.data`, and `.bin` formats.
 2. **Saving** datasets as `.bin` to avoid repeated parsing.
-3. **Splitting** datasets into train/test sets with or without shuffling.
+3. **Splitting** datasets into training and test sets (with or without shuffling).
 4. **Separating** features and labels.
-5. Supporting **templated datatypes**: `int`, `double`, `std::string`.
-6. **Printing** datasets and checking dimensions for debugging.
+5. **Viewing dataset heads** and dimensional info for debugging.
+6. **Full template support**: `int`, `double`, `std::string`.
 
 ---
 
 ## **2. Files Involved**
 
 ```
-/include/dataset_utils.h
-/src/main.cpp
-/Datasets/ (user-supplied)
+/include/dataset_utils.h    // Header with template dataset functions
+/src/main.cpp               // Example usage (if any)
+/Datasets/                  // Data files: .csv, .data, .bin
 ```
 
 ---
@@ -36,85 +30,110 @@ It offers functionality for:
 
 ### 🔹 **Loading**
 
-✔️ From `.csv` / `.data` (custom delimiters supported).
-✔️ From `.bin` (binary format) — fast reload.
+✔️ From `.csv` / `.data` files with user-defined **delimiter** (`char`) and **multi-space support**.
+✔️ From **binary (.bin)** files — faster loading for repeated experiments.
 
 ---
 
 ### 🔹 **Saving**
 
-✔️ Save any dataset as `.bin` for reuse.
+✔️ Save any dataset as a **binary file (.bin)**.
+✔️ Special handling for `std::string` type.
 
 ---
 
 ### 🔹 **Splitting**
 
-✔️ Random shuffling supported.
-✔️ User-defined test fraction (e.g., 0.2 for 20% test set).
-✔️ Returns separate train and test sets.
+✔️ Split into **train-test sets** with user-controlled **test fraction** (default 0.2).
+✔️ Supports **shuffling** with random indices.
+✔️ Internally uses `getIndices()` to create random or ordered indices.
 
 ---
 
 ### 🔹 **Feature/Label Separation**
 
-✔️ **Features**: all columns except last.
-✔️ **Labels**: last column, shape `[n x 1]` (avoids shape bugs in future matrix operations).
+✔️ Splits dataset into **Features** (`n x m-1`) and **Labels** (`n x 1`).
+✔️ Ensures **labels remain as 2D** (no dimension loss).
 
 ---
 
 ### 🔹 **Printing & Debugging**
 
-✔️ Print dataset shape (`[rows x columns]`).
-✔️ Print head preview (first N rows).
+✔️ `printDimensions()` — shows dataset shape `[rows x cols]`.
+✔️ `head()` — prints the **first N rows** in a nicely formatted table view.
+✔️ Auto-handles empty datasets gracefully.
 
 ---
 
 ### 🔹 **Template Support**
 
-✔️ Generic for **int**, **double**, **std::string**.
+✔️ Generic functions work for these types:
+
+```
+int      double      std::string
+```
+
+✔️ Binary save/load **specialized for `std::string`** (with length encoding).
 
 ---
 
-## **4. Challenges & Solutions**
+## **4. Technical Notes & Challenges**
 
-| Issue                                                         | Solution                                               |
-| ------------------------------------------------------------- | ------------------------------------------------------ |
-| Labels came as `[n x m]` instead of `[n x 1]`.                | Wrapped `row.back()` in a **new DataRow**.             |
-| Auto-structured bindings (`auto [X, y] = ...`) caused errors. | Required **C++17** enabled in compiler.                |
-| **Repeated reloading** from CSV/data slow during testing.     | Added **binary saving/loading** to speed up reload.    |
-| Binary read/write must handle **different datatypes**.        | Wrote **template specializations**.                    |
-| Needed flexible shuffling and splitting.                      | Returned **index vector separately** for easy slicing. |
-
----
-
-## **5. Learning Points**
-
-✔️ **Binary saving** greatly speeds up development cycles.
-✔️ **Templates are powerful** but need proper specialization for strings.
-✔️ Separating **indices from data** makes splits cleaner.
-✔️ Keeping labels `[n x 1]` prevents downstream shape errors.
+| Challenge                                                   | Solution                                                   |
+| ----------------------------------------------------------- | ---------------------------------------------------------- |
+| CSV parsing with **multiple spaces or single delimiter**    | Regex used for space-splitting; delimiter-based otherwise. |
+| String trimming for CSV lines needed                        | **Trimmed** before processing each line.                   |
+| Binary save/load of `std::string` needs **length encoding** | Specialized template writes **length + content**.          |
+| **Features/Labels shape issue** during splitting            | Explicit handling to wrap label in a **1-column DataRow**. |
+| Needed flexible **train-test splitting** with shuffling     | Built **index generator function** (`getIndices`).         |
 
 ---
 
-## **6. To-Do / Future Plans**
+## **5. Important Functions**
 
-* Automatic header detection in CSVs.
-* Allow setting random seed for reproducibility.
-* Handle multiple datatypes in a single dataset (e.g., mix of numeric & string).
-* Outlier handling (in Preprocessing module).
+| Function                   | Purpose                                   | Template?              |
+| -------------------------- | ----------------------------------------- | ---------------------- |
+| `loadDataset()`            | Load from CSV/data text files             | ✅ Yes                  |
+| `saveDatasetToCSV()`       | Save dataset as CSV file                  | ✅ Yes                  |
+| `saveDatasetToBinary()`    | Save as binary (specialized for string)   | ✅ Yes (Specialization) |
+| `loadDatasetFromBinary()`  | Load from binary (specialized for string) | ✅ Yes (Specialization) |
+| `head()`                   | Print first N rows with formatting        | ✅ Yes                  |
+| `printDimensions()`        | Print shape of dataset                    | ✅ Yes                  |
+| `splitFeaturesAndLabels()` | Separate Features & Labels                | ✅ Yes                  |
+| `getIndices()`             | Get shuffled or ordered row indices       | ❌ No                   |
+| `selectRowsByIndices()`    | Select rows based on index list           | ✅ Yes                  |
+| `trainTestSplit()`         | Split dataset into training and test sets | ✅ Yes                  |
 
 ---
 
-## **7. Known Limitations**
+## **6. Learning Points**
 
-* No CSV header detection yet.
-* Only single-type datasets per file (no mixed-type rows).
-* Missing value handling not covered (in Preprocessing module).
+✔️ **Templating allows single code base** for `int`, `double`, `string`.
+✔️ Binary file I/O is **customized for strings** to avoid read errors.
+✔️ `getIndices()` allows flexible shuffling logic separated from data logic.
+✔️ Printing (`head()`) uses **formatted, column-aligned output**.
 
 ---
 
-## **8. Version**
+## **7. To-Do / Future Enhancements**
 
-* **v1.0** — Base dataset utility functions completed.
+* [ ] CSV **header detection**.
+* [ ] Allow **mixed-type columns** (e.g., string + float).
+* [ ] Outlier handling (planned in Preprocessing Module).
+* [ ] **Random seed control** for reproducibility in shuffling.
 
+---
 
+## **8. Limitations**
+
+* Does not detect or skip **CSV headers**.
+* Cannot handle **missing values (NaNs)** yet.
+* **Mixed-type rows unsupported** in current version.
+
+---
+
+## **9. Version**
+
+| Version | Date       | Changes                                                                            |
+| ------- | ---------- | ---------------------------------------------------------------------------------- |
+| 1.1     | 18-06-2025 | Updated for full binary support, feature/label split fix, new `head()` formatting. |

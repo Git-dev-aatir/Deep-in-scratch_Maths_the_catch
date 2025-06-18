@@ -22,25 +22,41 @@ using DataRow = vector<T>;
 template<typename T>
 using Dataset = vector<DataRow<T>>;
 
-// trim from start (in place)
+/**
+ * @brief Trim whitespace from the start of a string (in place).
+ * @param s The string to trim.
+ */
 inline void ltrim(string &s) {
     s.erase(s.begin(), find_if(s.begin(), s.end(),
         [](unsigned char ch) { return !isspace(ch); }));
 }
 
-// trim from end (in place)
+/**
+ * @brief Trim whitespace from the end of a string (in place).
+ * @param s The string to trim.
+ */
 inline void rtrim(string &s) {
     s.erase(find_if(s.rbegin(), s.rend(),
         [](unsigned char ch) { return !isspace(ch); }).base(), s.end());
 }
 
-// trim from both ends (in place)
+/**
+ * @brief Trim whitespace from both ends of a string (in place).
+ * @param s The string to trim.
+ */
 inline void trim(string &s) {
     ltrim(s);
     rtrim(s);
 }
 
-// Function to split a string by a delimiter
+
+/**
+ * @brief Split a string into tokens based on a delimiter.
+ * @param line The string to split.
+ * @param delimiter The character used as delimiter.
+ * @param multiple_spaces If true, treats multiple spaces as one delimiter.
+ * @return A vector of string tokens.
+ */
 inline vector<string> split(const string &line, char delimiter, bool multiple_spaces) {
     vector<string> tokens;
 
@@ -65,7 +81,12 @@ inline vector<string> split(const string &line, char delimiter, bool multiple_sp
     return tokens;
 }
 
-// Generic parse function template
+/**
+ * @brief Parse a token string to the target type.
+ * @tparam T Target type.
+ * @param token The string token to parse.
+ * @return Parsed value of type T.
+ */
 template<typename T>
 T parseToken(const string &token);
 
@@ -94,7 +115,14 @@ inline string parseToken<string>(const string &token) {
     return token;
 }
 
-// Function to load dataset of type T
+/**
+ * @brief Load a dataset from a file.
+ * @tparam T Data type of the dataset.
+ * @param filename File to load data from.
+ * @param delimiter Delimiter used in the file.
+ * @param multiple_spaces True if multiple spaces should be treated as a delimiter.
+ * @return Loaded dataset.
+ */
 template<typename T>
 Dataset<T> loadDataset(const string &filename, char delimiter = ',', bool multiple_spaces=false) {
     ifstream file(filename);
@@ -123,7 +151,12 @@ Dataset<T> loadDataset(const string &filename, char delimiter = ',', bool multip
     return dataset;
 }
 
-// Function to save dataset to CSV file
+/**
+ * @brief Save a dataset to a CSV file.
+ * @tparam T Data type of the dataset.
+ * @param dataset The dataset to save.
+ * @param outputFilename Name of the output CSV file.
+ */
 template<typename T>
 void saveDatasetToCSV(const Dataset<T> &dataset, const string &outputFilename) {
     ofstream outFile(outputFilename);
@@ -145,8 +178,12 @@ void saveDatasetToCSV(const Dataset<T> &dataset, const string &outputFilename) {
     cout << "Dataset saved to " << outputFilename << endl;
 }
 
-// Function to display first 'n_rows' of the dataset
-
+/**
+ * @brief Print the first n rows of the dataset.
+ * @tparam T Data type of the dataset.
+ * @param dataset The dataset to display.
+ * @param n_rows Number of rows to display.
+ */
 template<typename T>
 void head(const Dataset<T> &dataset, int n_rows = 5) {
     if (dataset.empty()) {
@@ -157,6 +194,7 @@ void head(const Dataset<T> &dataset, int n_rows = 5) {
     size_t n_cols = dataset[0].size();
 
     // Print column headers
+    cout << endl << string(n_cols * 12 - 5, '-') << endl;
     cout << left;
     for (size_t col = 0; col < n_cols; ++col) {
         cout << setw(12) << ("Col " + to_string(col));
@@ -164,9 +202,10 @@ void head(const Dataset<T> &dataset, int n_rows = 5) {
     cout << endl;
 
     // Print separator line
-    cout << string(n_cols * 12, '-') << endl;
+    cout << string(n_cols * 12 - 5, '-') << endl;
 
     // Print first n_rows rows
+    bool flag = 0;
     for (const auto &row : dataset) {
         for (const auto &val : row) {
             cout << setw(12) << val;
@@ -174,10 +213,16 @@ void head(const Dataset<T> &dataset, int n_rows = 5) {
         cout << endl;
         --n_rows;
         if (n_rows <= 0) break;
+        else cout << endl;
     }
+    cout << string(n_cols * 12 - 5, '-') << endl << endl;
 }
 
-// print dimensions of Dataset 
+/**
+ * @brief Print the dimensions of the dataset.
+ * @tparam T Data type of the dataset.
+ * @param vec The dataset.
+ */ 
 template<typename T>
 void printDimensions(const Dataset<T>& vec) {
     size_t rows = vec.size();
@@ -186,7 +231,12 @@ void printDimensions(const Dataset<T>& vec) {
 }
 
 
-// Split dataset into features and labels
+/**
+ * @brief Split the dataset into features and labels.
+ * @tparam T Data type of the dataset.
+ * @param dataset The dataset to split.
+ * @return A pair containing features and labels datasets.
+ */
 template<typename T>
 pair <Dataset<T>, Dataset<T>> splitFeaturesAndLabels(const Dataset<T> &dataset) {
     Dataset<T> features;
@@ -204,7 +254,12 @@ pair <Dataset<T>, Dataset<T>> splitFeaturesAndLabels(const Dataset<T> &dataset) 
     return {features, labels};
 }
 
-// Split dataset into training set and test set
+/**
+ * @brief Generate shuffled or ordered indices.
+ * @param n Total number of indices.
+ * @param shuffle If true, shuffle the indices.
+ * @return Vector of indices.
+ */
 vector<size_t> getIndices(const size_t& n, bool shuffle = true) {
     vector<size_t> indices(n);
     // Fill indices with 0, 1, 2, ..., n-1
@@ -221,6 +276,13 @@ vector<size_t> getIndices(const size_t& n, bool shuffle = true) {
     return indices;
 }
 
+/**
+ * @brief Select rows from the dataset using specific indices.
+ * @tparam T Data type of the dataset.
+ * @param dataset The original dataset.
+ * @param indices Indices of the rows to select.
+ * @return Subset of the dataset.
+ */
 template<typename T>
 Dataset<T> selectRowsByIndices(const Dataset<T>& dataset, const vector<size_t>& indices ) {
     Dataset<T> subset;
@@ -230,6 +292,14 @@ Dataset<T> selectRowsByIndices(const Dataset<T>& dataset, const vector<size_t>& 
     return subset;
 }
 
+/**
+ * @brief Split the dataset into training and test sets.
+ * @tparam T Data type of the dataset.
+ * @param dataset The dataset to split.
+ * @param testFraction Fraction of data to be used for testing.
+ * @param shuffle If true, shuffle the data before splitting.
+ * @return A pair of training and test datasets.
+ */
 template<typename T>
 pair <Dataset<T>, Dataset<T>> trainTestSplit(Dataset<T> dataset,
                                             double testFraction = 0.2,
@@ -257,7 +327,12 @@ pair <Dataset<T>, Dataset<T>> trainTestSplit(Dataset<T> dataset,
 }
 
 
-// Save Dataset to binary (general version for int, double)
+/**
+ * @brief Save a dataset to a binary file (general version for int, double).
+ * @tparam T Data type of the dataset.
+ * @param dataset The dataset to save.
+ * @param filename Output binary file name.
+ */
 template<typename T>
 void saveDatasetToBinary(const Dataset<T>& dataset, const string& filename) {
     ofstream outFile(filename, ios::binary);
@@ -278,7 +353,12 @@ void saveDatasetToBinary(const Dataset<T>& dataset, const string& filename) {
     outFile.close();
 }
 
-// Load Dataset from binary (general version for int, double)
+/**
+ * @brief Load a dataset from a binary file (general version for int, double).
+ * @tparam T Data type of the dataset.
+ * @param filename Binary file name to read.
+ * @return Loaded dataset.
+ */
 template<typename T>
 Dataset<T> loadDatasetFromBinary(const string& filename) {
     ifstream inFile(filename, ios::binary);
@@ -305,7 +385,11 @@ Dataset<T> loadDatasetFromBinary(const string& filename) {
     return dataset;
 }
 
-// Specialization for string - Save
+/**
+ * @brief Specialization: Save a dataset of strings to a binary file.
+ * @param dataset The string dataset to save.
+ * @param filename Output binary file name.
+ */
 template<>
 inline void saveDatasetToBinary<string>(const Dataset<string>& dataset, const string& filename) {
     ofstream outFile(filename, ios::binary);
@@ -331,7 +415,11 @@ inline void saveDatasetToBinary<string>(const Dataset<string>& dataset, const st
     outFile.close();
 }
 
-// Specialization for string - Load
+/**
+ * @brief Specialization: Load a dataset of strings from a binary file.
+ * @param filename Binary file name to read.
+ * @return Loaded string dataset.
+ */
 template<>
 inline Dataset<string> loadDatasetFromBinary<string>(const string& filename) {
     ifstream inFile(filename, ios::binary);
