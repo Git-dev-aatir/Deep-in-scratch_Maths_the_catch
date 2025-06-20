@@ -11,8 +11,9 @@ It offers functionality for:
 2. **Saving** datasets as `.bin` to avoid repeated parsing.
 3. **Splitting** datasets into training and test sets (with or without shuffling).
 4. **Separating** features and labels.
-5. **Viewing dataset heads** and dimensional info for debugging.
-6. **Full template support**: `int`, `double`, `std::string`.
+5. **Flattening and unflattening datasets** (`squeeze`, `unsqueeze`).
+6. **Viewing dataset heads** and dimensional info for debugging.
+7. **Full template support**: `int`, `double`, `std::string`.
 
 ---
 
@@ -32,21 +33,23 @@ It offers functionality for:
 
 ✔️ From `.csv` / `.data` files with user-defined **delimiter** (`char`) and **multi-space support**.
 ✔️ From **binary (.bin)** files — faster loading for repeated experiments.
+✔️ Supports **type-specific parsing** (`int`, `double`, `string`) via `parseToken()`.
 
 ---
 
 ### 🔹 **Saving**
 
 ✔️ Save any dataset as a **binary file (.bin)**.
-✔️ Special handling for `std::string` type.
+✔️ Special handling for `std::string` type using **length encoding**.
+✔️ Save to CSV via `saveDatasetToCSV()`.
 
 ---
 
 ### 🔹 **Splitting**
 
 ✔️ Split into **train-test sets** with user-controlled **test fraction** (default 0.2).
-✔️ Supports **shuffling** with random indices.
-✔️ Internally uses `getIndices()` to create random or ordered indices.
+✔️ Supports **shuffling** with random indices via `getIndices()`.
+✔️ Uses index-based row selection for reproducibility.
 
 ---
 
@@ -60,14 +63,22 @@ It offers functionality for:
 ### 🔹 **Printing & Debugging**
 
 ✔️ `printDimensions()` — shows dataset shape `[rows x cols]`.
-✔️ `head()` — prints the **first N rows** in a nicely formatted table view.
-✔️ Auto-handles empty datasets gracefully.
+✔️ `head()` — prints the **first N rows** in a nicely formatted, aligned table view.
+✔️ Auto-handles **empty datasets gracefully**.
+
+---
+
+### 🔹 **Flattening & Unflattening (New)**
+
+✔️ **`squeeze()`**: Flattens a 2D vector to 1D.
+✔️ **`unsqueeze()`**: Adds dimension to a 1D vector, converting to 2D on specified axis.
+✔️ Supports axis **0 or 1**.
 
 ---
 
 ### 🔹 **Template Support**
 
-✔️ Generic functions work for these types:
+✔️ Generic functions work for:
 
 ```
 int      double      std::string
@@ -86,6 +97,7 @@ int      double      std::string
 | Binary save/load of `std::string` needs **length encoding** | Specialized template writes **length + content**.          |
 | **Features/Labels shape issue** during splitting            | Explicit handling to wrap label in a **1-column DataRow**. |
 | Needed flexible **train-test splitting** with shuffling     | Built **index generator function** (`getIndices`).         |
+| Need to flatten/reshape tensors for ML (new)                | Added `squeeze()` and `unsqueeze()` utility functions.     |
 
 ---
 
@@ -103,6 +115,8 @@ int      double      std::string
 | `getIndices()`             | Get shuffled or ordered row indices       | ❌ No                   |
 | `selectRowsByIndices()`    | Select rows based on index list           | ✅ Yes                  |
 | `trainTestSplit()`         | Split dataset into training and test sets | ✅ Yes                  |
+| `squeeze()`                | Flatten 2D vector to 1D (New)             | ✅ Yes                  |
+| `unsqueeze()`              | Add dimension to 1D vector (New)          | ✅ Yes                  |
 
 ---
 
@@ -112,6 +126,7 @@ int      double      std::string
 ✔️ Binary file I/O is **customized for strings** to avoid read errors.
 ✔️ `getIndices()` allows flexible shuffling logic separated from data logic.
 ✔️ Printing (`head()`) uses **formatted, column-aligned output**.
+✔️ Added **tensor reshaping tools (`squeeze`, `unsqueeze`)** to support ML pipeline needs.
 
 ---
 
@@ -121,6 +136,8 @@ int      double      std::string
 * [ ] Allow **mixed-type columns** (e.g., string + float).
 * [ ] Outlier handling (planned in Preprocessing Module).
 * [ ] **Random seed control** for reproducibility in shuffling.
+* [ ] Support for **NaN/missing values** handling.
+* [ ] More generalized **tensor reshaping** utilities.
 
 ---
 
@@ -129,11 +146,12 @@ int      double      std::string
 * Does not detect or skip **CSV headers**.
 * Cannot handle **missing values (NaNs)** yet.
 * **Mixed-type rows unsupported** in current version.
+* `unsqueeze()` limited to **axis 0 and 1 only**.
 
 ---
 
 ## **9. Version**
 
-| Version | Date       | Changes                                                                            |
-| ------- | ---------- | ---------------------------------------------------------------------------------- |
-| 1.1     | 18-06-2025 | Updated for full binary support, feature/label split fix, new `head()` formatting. |
+| Version | Date       | Changes                                                                                     |
+| ------- | ---------- | ------------------------------------------------------------------------------------------- |
+| 1.2     | 19-06-2025 | Added `squeeze()` and `unsqueeze()` tensor operations; fixed and beautified `head()` print. |

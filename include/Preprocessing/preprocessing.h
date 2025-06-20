@@ -426,6 +426,11 @@ void removeOutliers(Dataset<T>& data, OutlierMethod method = OutlierMethod::Z_SC
     for (size_t i = 0; i < data.size(); ++i)
         if (!to_remove[i])
             filtered.push_back(data[i]);
+        else {
+            cout << "Removed data point {" << i << "} : ";
+            for (size_t j=0; j<data[i].size(); ++j)
+                cout << data[i][j] << " | ";
+        }
     
     data = filtered;
 }

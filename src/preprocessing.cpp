@@ -1,5 +1,5 @@
-#include "../include/dataset_utils.h"
-#include "../include/preprocessing.h"
+#include "../include/Preprocessing/dataset_utils.h"
+#include "../include/Preprocessing/preprocessing.h"
 #include <iostream>
 #include <string>
 #include <typeinfo>
@@ -111,60 +111,61 @@ int main() {
 
 // PART - 2 
 
-    // // removing highly correlated columns 
-    // removeColumns(housing, {8, 4});
+    // removing highly correlated columns 
+    removeColumns(housing, {8, 4});
 
-    // // detecting outliers and removing
-    // removeOutliers(housing, OutlierMethod::Z_SCORE, 3);
-
-// ----------------------------------------------------------------------------------------
-
-// Part 3 - standardizing data 
-
-    // standardize(housing);
+    // detecting outliers and removing
+    removeOutliers(housing, OutlierMethod::Z_SCORE, 3);
 
 // ----------------------------------------------------------------------------------------
 
-// Part 4 - splitting the dataset 
+// Part 3 - splitting the dataset 
 
-    // // Train-test-split
-    // auto train_test_split_result = trainTestSplit(housing, 0.2, true);
-    // Dataset<double> train_set = train_test_split_result.first;
-    // Dataset<double> test_set = train_test_split_result.second;
+    // Train-test-split
+    auto train_test_split_result = trainTestSplit(housing, 0.2, true);
+    Dataset<double> train_set = train_test_split_result.first;
+    Dataset<double> test_set = train_test_split_result.second;
 
-    // // Feature-label-split
-    // auto train_split_result = splitFeaturesAndLabels(train_set);
-    // Dataset<double> X_train = train_split_result.first;
-    // Dataset<double> y_train = train_split_result.second;
+    // Feature-label-split
+    auto train_split_result = splitFeaturesAndLabels(train_set);
+    Dataset<double> X_train = train_split_result.first;
+    Dataset<double> y_train = train_split_result.second;
 
-    // auto test_split_result = splitFeaturesAndLabels(test_set);
-    // Dataset<double> X_test = test_split_result.first;
-    // Dataset<double> y_test = test_split_result.second;
+    auto test_split_result = splitFeaturesAndLabels(test_set);
+    Dataset<double> X_test = test_split_result.first;
+    Dataset<double> y_test = test_split_result.second;
 
 // ----------------------------------------------------------------------------------------
 
-    // cout << "X_train" << endl;
-    // printDimensions(X_train);
-    // head(X_train);
+// Part 4 - standardizing data 
 
-    // cout << endl << "y_train" << endl;
-    // printDimensions(y_train);
-    // head(y_train);
+    standardize(X_train);
+    standardize(X_test);
+
+// ----------------------------------------------------------------------------------------
+
+    cout << "X_train" << endl;
+    printDimensions(X_train);
+    head(X_train);
+
+    cout << endl << "y_train" << endl;
+    printDimensions(y_train);
+    head(y_train);
     
-    // cout << "X_test" << endl;
-    // printDimensions(X_test);
-    // head(X_test);
+    cout << "X_test" << endl;
+    printDimensions(X_test);
+    head(X_test);
 
-    // cout << endl << "y_test" << endl;
-    // printDimensions(y_test);
-    // head(y_test);
+    cout << endl << "y_test" << endl;
+    printDimensions(y_test);
+    head(y_test);
 
 // saving dataset in preprocessed_data.bin
 
-    // saveDatasetToBinary(housing, string(DATASET_PATH_BIN) + "X_train.bin");
-    // saveDatasetToBinary(housing, string(DATASET_PATH_BIN) + "y_train.bin");
-    // saveDatasetToBinary(housing, string(DATASET_PATH_BIN) + "X_test.bin");
-    // saveDatasetToBinary(housing, string(DATASET_PATH_BIN) + "y_test.bin");
+    saveDatasetToBinary(X_train, string(DATASET_PATH_BIN) + "X_train.bin");
+    saveDatasetToBinary(y_train, string(DATASET_PATH_BIN) + "y_train.bin");
+    saveDatasetToBinary(X_test, string(DATASET_PATH_BIN) + "X_test.bin");
+    saveDatasetToBinary(y_test, string(DATASET_PATH_BIN) + "y_test.bin");
 
     return 0;
 }

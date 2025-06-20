@@ -194,7 +194,7 @@ void head(const Dataset<T> &dataset, int n_rows = 5) {
     size_t n_cols = dataset[0].size();
 
     // Print column headers
-    cout << endl << string(n_cols * 12 - 5, '-') << endl;
+    cout << endl << string(n_cols * 12, '-') << endl;
     cout << left;
     for (size_t col = 0; col < n_cols; ++col) {
         cout << setw(12) << ("Col " + to_string(col));
@@ -202,7 +202,7 @@ void head(const Dataset<T> &dataset, int n_rows = 5) {
     cout << endl;
 
     // Print separator line
-    cout << string(n_cols * 12 - 5, '-') << endl;
+    cout << string(n_cols * 12, '-') << endl;
 
     // Print first n_rows rows
     bool flag = 0;
@@ -215,7 +215,7 @@ void head(const Dataset<T> &dataset, int n_rows = 5) {
         if (n_rows <= 0) break;
         else cout << endl;
     }
-    cout << string(n_cols * 12 - 5, '-') << endl << endl;
+    cout << string(n_cols * 12, '-') << endl << endl;
 }
 
 /**
@@ -452,6 +452,57 @@ inline Dataset<string> loadDatasetFromBinary<string>(const string& filename) {
     return dataset;
 }
 
+/**
+ * @brief Flattens a 2D matrix (vector of vectors) into a 1D vector.
+ *
+ * This function removes the 2D structure of the matrix and creates a single 
+ * 1D vector containing all the elements of the matrix in row-major order.
+ *
+ * @param matrix A 2D vector containing the matrix elements.
+ * @return A 1D vector containing the flattened elements of the matrix.
+ */
+template <typename T>
+std::vector<T> squeeze(const std::vector<std::vector<T>>& matrix) {
+    std::vector<T> result;
 
+    // Iterate through the rows and columns of the matrix
+    for (const auto& row : matrix) {
+        for (T value : row) {
+            result.push_back(value);
+        }
+    }
+
+    return result;
+}
+
+/**
+ * @brief Adds a new dimension to a 1D vector, converting it to a 2D vector along a given axis.
+ *
+ * This function "unsqueezes" a 1D vector by inserting a new dimension of size 1
+ * at the specified axis. The function supports higher-dimensional tensors by choosing
+ * the axis at which the dimension is inserted.
+ *
+ * @param vector A 1D vector to be unsqueezed.
+ * @param axis The axis index at which to insert the size-1 dimension.
+ * @return A 2D vector where the original vector is placed along the specified axis.
+ */
+template <typename T>
+std::vector<std::vector<T>> unsqueeze(const std::vector<T>& vector, int axis=1) {
+    std::vector<std::vector<T>> result;
+
+    if (axis == 0) {
+        // Insert the 1D vector as the only row of a 2D matrix
+        result.push_back(vector);
+    } else if (axis == 1) {
+        // Insert the 1D vector as the only column of a 2D matrix
+        for (T value : vector) {
+            result.push_back({value});
+        }
+    } else {
+        std::cerr << "Invalid axis value. Only axis 0 and 1 are supported in this case.\n";
+    }
+
+    return result;
+}
 
 #endif // DATASET_UTILS_H
