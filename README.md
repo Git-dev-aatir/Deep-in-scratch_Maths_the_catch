@@ -1,4 +1,4 @@
-# **ML & Deep Learning from Scratch in C++**
+# **ML & Deep Learning from Scratch in C++** 🧠💻
 
 A handmade forge of machine learning and deep learning tools using pure number wizardry — to predict and understand the world from the ground up.
 
@@ -16,12 +16,19 @@ The aim is educational: build everything yourself to fully understand data prepr
 
 ```
 /include
-    dataset_utils.h      # Templated Dataset loading, saving, splitting, printing
+    
+    /Preprocessing
+        dataset_utils.h      # Templated Dataset loading, saving, splitting, printing
+    
+    /Losses
+        loss functions (mse, mae, bce, cross_entropy, hinge_loss)
 
-/ml
-    linear_regression.h  # (Planned) Linear Regression Implementation
-    knn.h               # (Planned) K-Nearest Neighbors
-    ...more coming soon
+    /General
+        general features (contains only initialization function for parameters)
+
+    /Layers
+        neural network layers (Dense, activation)
+    
 
 /src
     main.cpp             # Demo: loading data, splitting into train/test, feature/label
@@ -103,13 +110,19 @@ int main() {
 ## 📜 **Datasets**
 
 The `/Datasets` folder is intentionally **excluded** from this repository (`.gitignore`).
-Feel free to download and experiment with datasets of your choice (e.g., UCI Machine Learning Repository).
+Feel free to download and experiment with datasets of your choice (e.g., from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/index.php)).
 
 ---
 
 ## 📝 **Journey Logs**
 
-Every step, experiment, design decision, or error made during this project is documented in the `/Journey` folder in Markdown format.
+Every step, experiment, design decision, or error made during this project is documented in the `/Journey` folder in Markdown format:
+
+* [Step 1: Dataset Handling and Loading](./Journey/01_dataset_utility.md)
+* [Step 2: Data Preprocessing Notes](./Journey/02_preprocessing_module.md)
+* [Step 3: Losses](./Journey/03_losses.md)
+* [Step 4: Initialization](./Journey/04_initialization.md)
+* [Step 5: Neural Net Layers Implementation with Activation Functions](./Journey/05_layers.md)
 
 ✔️ Transparent and raw development logs
 ✔️ Useful for reflection and learning
