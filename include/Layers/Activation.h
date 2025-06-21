@@ -192,6 +192,13 @@ public:
     void summary() const override {
         std::cout << "Activation Layer: " << activationTypeToString(activation_type) << std::endl;
     }
+    
+    /**
+     * @brief Getter for the activation type of this layer.
+     */
+    ActivationType getActivationType() const {
+        return activation_type;
+    }
 };
 
 #endif // ACTIVATION_H

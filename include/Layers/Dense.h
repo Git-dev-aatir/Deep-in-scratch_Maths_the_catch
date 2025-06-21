@@ -129,6 +129,13 @@ public:
         return grad_input;
     }
 
+    void clearGradients() {
+        for (auto& row : grad_weights) {
+            std::fill(row.begin(), row.end(), 0.0);
+        }
+        std::fill(grad_biases.begin(), grad_biases.end(), 0.0);
+    }
+
     void summary() const override {
         std::cout << "Dense Layer: " << input_size << " -> " << output_size << std::endl;
     }
