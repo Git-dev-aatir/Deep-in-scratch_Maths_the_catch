@@ -1,157 +1,183 @@
-# 📦 **Dataset Utility Module — Documentation (Updated)**
+# 📦 **Dataset Utility Module**
 
 ---
 
-## **1. Overview**
+## **1. Introduction**
 
-This module provides a **generic, reusable, and efficient utility** for handling datasets in C++ Machine Learning or Data Processing projects.
-It offers functionality for:
+This module provides a comprehensive suite of generic and templated **dataset loading, saving, and preprocessing utilities** for CSV, binary, and in-memory datasets. It serves as the foundational step for machine learning workflows in C++ by supporting:
 
-1. **Loading** datasets from `.csv`, `.data`, and `.bin` formats.
-2. **Saving** datasets as `.bin` to avoid repeated parsing.
-3. **Splitting** datasets into training and test sets (with or without shuffling).
-4. **Separating** features and labels.
-5. **Flattening and unflattening datasets** (`squeeze`, `unsqueeze`).
-6. **Viewing dataset heads** and dimensional info for debugging.
-7. **Full template support**: `int`, `double`, `std::string`.
+* Flexible **data input/output** with support for numeric and string types.
+* **Preprocessing utilities** like feature-label splitting, train-test splitting, and row selection.
+* Basic **tensor-like operations** (reshape, squeeze, unsqueeze, transpose) paving the way toward tensor abstractions.
+* Debug-friendly **printing and descriptive statistics** for quick dataset insights.
 
 ---
 
-## **2. Files Involved**
+## **2. Files and Structure**
 
 ```
-/include/dataset_utils.h    // Header with template dataset functions
-/src/main.cpp               // Example usage (if any)
-/Datasets/                  // Data files: .csv, .data, .bin
+/include/Preprocessing/dataset_utils.h    // Template declarations, type aliases, and docstrings
+/src/Preprocessing/dataset_utils.cpp      // Template implementations, explicit instantiations
+/include/Preprocessing/Helper_functions.h // Inline helpers (trimming, splitting, median, isMissing)
+/Datasets/                                // Dataset files (CSV, binary)
+/Journey/01_dataset_utility.md            // Documentation (this file)
 ```
 
 ---
 
-## **3. Features**
+## **3. Module Features & Journey Notes**
 
-### 🔹 **Loading**
+### 🔹 **Dataset Loading (Text/Binary)**
 
-✔️ From `.csv` / `.data` files with user-defined **delimiter** (`char`) and **multi-space support**.
-✔️ From **binary (.bin)** files — faster loading for repeated experiments.
-✔️ Supports **type-specific parsing** (`int`, `double`, `string`) via `parseToken()`.
+* Load CSV and generic text files, supporting both single-character delimiters and multi-space delimiters using regex.
+* Load binary datasets with specialization for `std::string` due to string length handling.
+* Template specializations ensure type-safe parsing for:
 
----
+  * `int`
+  * `double` (with NaN-aware missing value checking)
+  * `std::string`
 
-### 🔹 **Saving**
+#### Journey Note:
 
-✔️ Save any dataset as a **binary file (.bin)**.
-✔️ Special handling for `std::string` type using **length encoding**.
-✔️ Save to CSV via `saveDatasetToCSV()`.
-
----
-
-### 🔹 **Splitting**
-
-✔️ Split into **train-test sets** with user-controlled **test fraction** (default 0.2).
-✔️ Supports **shuffling** with random indices via `getIndices()`.
-✔️ Uses index-based row selection for reproducibility.
+> Implementing `parseToken<T>()` highlighted the need for **type specialization** in C++ — especially for string parsing and robust error handling.
 
 ---
 
-### 🔹 **Feature/Label Separation**
+### 🔹 **Saving Datasets**
 
-✔️ Splits dataset into **Features** (`n x m-1`) and **Labels** (`n x 1`).
-✔️ Ensures **labels remain as 2D** (no dimension loss).
+* Save datasets as CSV files for readability.
+* Save/load binary files efficiently with explicit support for strings by saving lengths alongside character data.
 
----
+#### Journey Note:
 
-### 🔹 **Printing & Debugging**
-
-✔️ `printDimensions()` — shows dataset shape `[rows x cols]`.
-✔️ `head()` — prints the **first N rows** in a nicely formatted, aligned table view.
-✔️ Auto-handles **empty datasets gracefully**.
+> Managing strings in binary format required explicit length encoding to ensure consistent reading/writing, unlike numeric types.
 
 ---
 
-### 🔹 **Flattening & Unflattening (New)**
+### 🔹 **Train/Test Splitting**
 
-✔️ **`squeeze()`**: Flattens a 2D vector to 1D.
-✔️ **`unsqueeze()`**: Adds dimension to a 1D vector, converting to 2D on specified axis.
-✔️ Supports axis **0 or 1**.
+* User-configurable test fraction (default 20%).
+* Optional shuffling with `std::shuffle` for randomized splits.
+* Index generation factored out via `getIndices()` for easy reproducibility and unit testing.
 
----
+#### Journey Note:
 
-### 🔹 **Template Support**
-
-✔️ Generic functions work for:
-
-```
-int      double      std::string
-```
-
-✔️ Binary save/load **specialized for `std::string`** (with length encoding).
+> Separating index generation improved modularity and will simplify adding seed control for reproducible experiments.
 
 ---
 
-## **4. Technical Notes & Challenges**
+### 🔹 **Feature/Label Splitting**
 
-| Challenge                                                   | Solution                                                   |
-| ----------------------------------------------------------- | ---------------------------------------------------------- |
-| CSV parsing with **multiple spaces or single delimiter**    | Regex used for space-splitting; delimiter-based otherwise. |
-| String trimming for CSV lines needed                        | **Trimmed** before processing each line.                   |
-| Binary save/load of `std::string` needs **length encoding** | Specialized template writes **length + content**.          |
-| **Features/Labels shape issue** during splitting            | Explicit handling to wrap label in a **1-column DataRow**. |
-| Needed flexible **train-test splitting** with shuffling     | Built **index generator function** (`getIndices`).         |
-| Need to flatten/reshape tensors for ML (new)                | Added `squeeze()` and `unsqueeze()` utility functions.     |
+* Splits dataset into feature matrix (`n x (m-1)`) and label matrix (`n x 1`), preserving label dimensionality as 2D for model compatibility.
+* Avoids common dimension collapse bugs by wrapping labels in a `DataRow`.
+
+#### Journey Note:
+
+> Wrapping labels in 2D vectors mirrors PyTorch’s `.unsqueeze(1)` behavior, essential for later layer operations.
 
 ---
 
-## **5. Important Functions**
+### 🔹 **Basic Tensor-Like Utilities**
 
-| Function                   | Purpose                                   | Template?              |
-| -------------------------- | ----------------------------------------- | ---------------------- |
-| `loadDataset()`            | Load from CSV/data text files             | ✅ Yes                  |
-| `saveDatasetToCSV()`       | Save dataset as CSV file                  | ✅ Yes                  |
-| `saveDatasetToBinary()`    | Save as binary (specialized for string)   | ✅ Yes (Specialization) |
-| `loadDatasetFromBinary()`  | Load from binary (specialized for string) | ✅ Yes (Specialization) |
-| `head()`                   | Print first N rows with formatting        | ✅ Yes                  |
-| `printDimensions()`        | Print shape of dataset                    | ✅ Yes                  |
-| `splitFeaturesAndLabels()` | Separate Features & Labels                | ✅ Yes                  |
-| `getIndices()`             | Get shuffled or ordered row indices       | ❌ No                   |
-| `selectRowsByIndices()`    | Select rows based on index list           | ✅ Yes                  |
-| `trainTestSplit()`         | Split dataset into training and test sets | ✅ Yes                  |
-| `squeeze()`                | Flatten 2D vector to 1D (New)             | ✅ Yes                  |
-| `unsqueeze()`              | Add dimension to 1D vector (New)          | ✅ Yes                  |
+* **`squeeze()`**: Flattens 2D datasets to 1D vectors.
+* **`unsqueeze()`**: Adds a dimension to 1D vectors along axis 0 (row vector) or axis 1 (column vector).
+* **`reshape()`**: Reshapes 2D vectors with dimension consistency checks.
+* **`transpose()`**: Swaps rows and columns.
+
+#### Journey Note:
+
+> Inspired by PyTorch, these utilities represent the first steps toward full tensor abstractions in C++.
 
 ---
 
-## **6. Learning Points**
+### 🔹 **Debugging Helpers**
 
-✔️ **Templating allows single code base** for `int`, `double`, `string`.
-✔️ Binary file I/O is **customized for strings** to avoid read errors.
-✔️ `getIndices()` allows flexible shuffling logic separated from data logic.
-✔️ Printing (`head()`) uses **formatted, column-aligned output**.
-✔️ Added **tensor reshaping tools (`squeeze`, `unsqueeze`)** to support ML pipeline needs.
+* **`head()`**: Nicely formatted printout of first N rows, with column headers and spacing.
+* **`printDimensions()`**: Prints `[rows x cols]` for quick dataset shape inspection.
+* **`describeDataset()`**: Numeric summaries (mean, stddev, quartiles) with type checking to ensure numeric-only operation.
 
----
+#### Journey Note:
 
-## **7. To-Do / Future Enhancements**
-
-* [ ] CSV **header detection**.
-* [ ] Allow **mixed-type columns** (e.g., string + float).
-* [ ] Outlier handling (planned in Preprocessing Module).
-* [ ] **Random seed control** for reproducibility in shuffling.
-* [ ] Support for **NaN/missing values** handling.
-* [ ] More generalized **tensor reshaping** utilities.
+> Achieving Pandas-like printing in C++ demanded careful formatting and stream manipulations.
 
 ---
 
-## **8. Limitations**
+## **4. Inline Helper Functions**
 
-* Does not detect or skip **CSV headers**.
-* Cannot handle **missing values (NaNs)** yet.
-* **Mixed-type rows unsupported** in current version.
-* `unsqueeze()` limited to **axis 0 and 1 only**.
+**Note:** Helper utilities such as string trimming (`ltrim()`, `rtrim()`, `trim()`), splitting (`split()`), missing value detection (`isMissing<T>()`), and statistical helpers (e.g., `get_median()`) are **defined separately** in **`Helper_functions.h`** and included in this module via `#include "Helper_functions.h"`. These functions support core dataset operations but are maintained independently for modularity and reuse.
 
 ---
 
-## **9. Version**
+## **5. Technical Challenges & Solutions**
 
-| Version | Date       | Changes                                                                                     |
-| ------- | ---------- | ------------------------------------------------------------------------------------------- |
-| 1.2     | 19-06-2025 | Added `squeeze()` and `unsqueeze()` tensor operations; fixed and beautified `head()` print. |
+| Challenge                                          | Solution                                                     |
+| -------------------------------------------------- | ------------------------------------------------------------ |
+| Handling CSV with **multiple spaces / delimiters** | Regex splitting or char delimiter based splitting            |
+| Reliable **whitespace trimming**                   | Custom inline trim functions in Helper\_functions.h          |
+| Binary I/O for **strings**                         | Length-prefix encoding and decoding                          |
+| Preserving label dimensionality (avoid flattening) | Wrapping labels as 2D single-column DataRow                  |
+| Reproducible **train/test splitting**              | Extracted index generation with optional shuffle             |
+| Tensor-like reshaping utilities                    | Added `squeeze()`, `unsqueeze()`, `reshape()`, `transpose()` |
+
+---
+
+## **6. Key Functions — Summary**
+
+| Function                   | Description                             | Template?          | Specialized for string? |
+| -------------------------- | --------------------------------------- | ------------------ | ----------------------- |
+| `loadDataset()`            | Load CSV/binary datasets                | Yes                | Yes                     |
+| `saveDatasetToCSV()`       | Save dataset as CSV                     | Yes                | Yes                     |
+| `saveDatasetToBinary()`    | Save dataset as binary                  | Yes                | Yes                     |
+| `loadDatasetFromBinary()`  | Load dataset from binary                | Yes                | Yes                     |
+| `head()`                   | Print first N rows formatted            | Yes                | Yes                     |
+| `printDimensions()`        | Print dataset shape                     | Yes                | Yes                     |
+| `describeDataset()`        | Numeric descriptive stats               | Yes (numeric-only) | No                      |
+| `splitFeaturesAndLabels()` | Split features and labels               | Yes                | Yes                     |
+| `getIndices()`             | Generate shuffled or sequential indices | No                 | N/A                     |
+| `selectRowsByIndices()`    | Select rows by index                    | Yes                | Yes                     |
+| `trainTestSplit()`         | Split dataset into train/test           | Yes                | Yes                     |
+| `squeeze()`                | Flatten 2D to 1D vector                 | Yes                | Yes                     |
+| `unsqueeze()`              | Add dimension to 1D vector              | Yes                | Yes                     |
+| `reshape()`                | Reshape 2D vector                       | Yes                | Yes                     |
+| `transpose()`              | Transpose 2D matrix                     | Yes                | Yes                     |
+
+---
+
+## **7. Learnings & Evolution**
+
+* Template specialization is key for safe and efficient parsing of diverse data types.
+* C++ requires explicit handling of binary data for non-POD types like strings.
+* Inspired by PyTorch, tensor utilities like `squeeze` and `unsqueeze` were implemented early for smooth data transformations.
+* Formatting output to mimic Python libraries took careful handling but greatly improves usability.
+* Modularizing helper functions improved code clarity and reusability.
+
+---
+
+## **8. To-Do for Future Versions**
+
+* [ ] Auto-detect and parse CSV headers.
+* [ ] Support for rows with mixed data types (`int`, `double`, `string` in same row).
+* [ ] Implement missing value handling for all types.
+* [ ] Expand tensor utilities with batch dimensions, higher-dimensional tensors.
+* [ ] More comprehensive error handling and input validation.
+
+---
+
+## **9. Limitations (as of v1.2)**
+
+* No automatic header parsing in CSV files.
+* Missing value handling limited to double NaN checks only.
+* No support for heterogeneous data types in a single dataset row.
+* `unsqueeze()` only supports axis 0 and 1.
+* `describeDataset()` restricted to numeric types (due to static\_assert).
+* Helper functions separated — require inclusion of `Helper_functions.h` for full functionality.
+
+---
+
+## **10. Version Log**
+
+| Version | Date       | Changes                                                                                                           |
+| ------- | ---------- | ----------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 12-05-2025 | Initial dataset loading/saving, basic parsing and printing utilities                                              |
+| 1.1     | 05-06-2025 | Added binary I/O with string specialization, improved train/test split                                            |
+| 1.2     | 19-06-2025 | Added tensor-like utilities (`squeeze()`, `unsqueeze()`, `reshape()`, `transpose()`), enhanced printing and stats |

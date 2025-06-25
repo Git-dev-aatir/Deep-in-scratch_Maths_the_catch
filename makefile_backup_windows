@@ -1,0 +1,55 @@
+# =======================
+#        Makefile
+#  Windows + mingw32-make compatible
+#  Recursive directory & header dependency aware
+# =======================
+
+CXX := g++
+CXXFLAGS := -std=c++17 -Wall -Wextra -Iinclude -O2 -MMD -MP
+
+SRC_DIR := src
+BUILD_DIR := build
+
+# Find all .cpp files (POSIX format even on Windows via Git Bash or compatible shells)
+SRC_FILES := $(shell find $(SRC_DIR) -name "*.cpp")
+
+# Map .cpp -> .o in build/
+OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRC_FILES))
+
+# Create directory before compiling (mkdir -p style for Unix, works in Git Bash / MSYS / MinGW)
+MKDIR_P = mkdir -p
+
+# Default target
+all: $(OBJ_FILES)
+	@echo "✅ Library built successfully. No main executable produced."
+
+# Compilation rule: src/...cpp -> build/...o
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@$(MKDIR_P) $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Auto-include dependency files to detect header changes
+-include $(OBJ_FILES:.o=.d)
+
+# =======================
+# Run any example file:
+# Usage: mingw32-make run-example FILE=Examples/my_example.cpp
+# =======================
+run-example:
+ifndef FILE
+	$(error ❌ FILE variable not set. Usage: mingw32-make run-example FILE=path/to/file.cpp)
+endif
+	@$(MKDIR_P) $(BUILD_DIR)
+	@if [ -f $(BUILD_DIR)/example.exe ]; then rm -f $(BUILD_DIR)/example.exe; fi
+	$(CXX) $(CXXFLAGS) $(FILE) -o $(BUILD_DIR)/example.exe
+	@echo "🚀 Running example:"
+	@./$(BUILD_DIR)/example.exe
+
+# =======================
+# Clean
+# =======================
+clean:
+	@echo "🧹 Cleaning build directory..."
+	rm -rf $(BUILD_DIR)
+
+.PHONY: all run-example clean

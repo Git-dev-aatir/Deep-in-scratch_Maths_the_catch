@@ -1,154 +1,230 @@
-# 03\_losses.md
-
-## Loss Functions Module
-
-This module provides a set of commonly used loss functions and their derivatives, designed to be used in neural network training and evaluation.
-
-*NOTE* :
-* All losses are made thinking of labels (y) as a vector of one-hot-vectors or 2-D matrices.
-* The labels (y) can also be considered as a vector of single element sub-vectors (still 2-D matrices).
+# 📐 **Losses**
 
 ---
 
-## **Available Loss Functions:**
+## 📦 Loss Functions Module
 
-### 1. **Mean Squared Error (MSE)**
-
-* **Function**: `mse_loss(const vector<vector<double>> &y_true, const vector<vector<double>> &y_pred)`
-* **Description**: Computes the Mean Squared Error between the predicted and true values.
-* **Formula**:
-
-  $$
-  MSE = \frac{1}{N \times C} \sum_{i=1}^{N} \sum_{j=1}^{C} (y_{true}^{(i,j)} - y_{pred}^{(i,j)})^2
-  $$
-* **Returns**: `double` (MSE loss)
-* **Throws**: `invalid_argument` if batch or class size mismatch occurs.
-
-#### **Derivative:**
-
-* **Function**: `mse_derivative(const vector<vector<double>> &y_true, const vector<vector<double>> &y_pred)`
-* **Returns**:
-
-  $$
-  \frac{2(y_{pred} - y_{true})}{N \times C}
-  $$
-* **Output**: 2D vector matching the shape of input.
+This module provides **loss functions** and their **derivatives**, used for training and evaluating models like regressors, classifiers, and SVMs.
 
 ---
 
-### 2. **Mean Absolute Error (MAE)**
+## 🔍 Overview
 
-* **Function**: `mae_loss(const vector<vector<double>> &y_true, const vector<vector<double>> &y_pred)`
-* **Description**: Computes the Mean Absolute Error.
-* **Formula**:
+✔️ Supports **single sample** and **batch** versions
+✔️ Handles **logits vs probabilities** (where applicable)
+✔️ Performs **input validation** (size, emptiness, shape consistency)
+✔️ Implements:
 
-  $$
-  MAE = \frac{1}{N \times C} \sum_{i=1}^{N} \sum_{j=1}^{C} |y_{true}^{(i,j)} - y_{pred}^{(i,j)}|
-  $$
-* **Returns**: `double` (MAE loss)
-* **Throws**: `invalid_argument` if batch or class size mismatch occurs.
-
-#### **Derivative (Subgradient):**
-
-* **Function**: `mae_derivative(const vector<vector<double>> &y_true, const vector<vector<double>> &y_pred)`
-* **Returns**:
-
-  * `1 / (N * C)` if `y_pred > y_true`
-  * `-1 / (N * C)` if `y_pred < y_true`
-  * `0` otherwise.
+* Mean Squared Error (MSE)
+* Mean Absolute Error (MAE)
+* Binary Cross Entropy (BCE)
+* Categorical Cross Entropy (CE)
+* Hinge Loss (SVM)
 
 ---
 
-### 3. **Binary Cross Entropy (BCE)**
+## 📂 Files
 
-* **Function**: `bce_loss(const vector<vector<double>> &y_true, const vector<vector<double>> &y_pred)`
-* **Description**: Computes Binary Cross-Entropy loss for binary classification tasks.
-* **Formula**:
-
-  $$
-  BCE = -\frac{1}{N \times C} \sum_{i=1}^{N} \sum_{j=1}^{C} \left[y_{true}^{(i,j)} \log(y_{pred}^{(i,j)}) + (1 - y_{true}^{(i,j)}) \log(1 - y_{pred}^{(i,j)})\right]
-  $$
-* **Returns**: `double` (BCE loss)
-* **Note**: Clamps predictions to avoid log(0).
-
-#### **Derivative:**
-
-* **Function**: `bce_derivative(const vector<vector<double>> &y_true, const vector<vector<double>> &y_pred)`
-* **Returns**:
-
-  $$
-  \frac{(y_{pred} - y_{true})}{y_{pred} (1 - y_{pred}) \times N \times C}
-  $$
-* **Clamped to avoid division by zero**.
+| File                                   | Description                         |
+| -------------------------------------- | ----------------------------------- |
+| `include/Metrics/Losses.h`             | Function declarations (header file) |
+| `src/Metrics/Losses/mse.cpp`           | MSE implementation                  |
+| `src/Metrics/Losses/mae.cpp`           | MAE implementation                  |
+| `src/Metrics/Losses/bce.cpp`           | BCE implementation                  |
+| `src/Metrics/Losses/cross_entropy.cpp` | Cross Entropy implementation        |
+| `src/Metrics/Losses/hinge.cpp`         | Hinge Loss implementation           |
 
 ---
 
-### 4. **Categorical Cross-Entropy (Softmax Output)**
+## **General Notes**
 
-* **Function**: `cross_entropy_loss(const vector<vector<double>> &y_true, const vector<vector<double>> &y_pred)`
-* **Description**: Computes Cross-Entropy loss for multi-class classification (softmax probabilities).
-* **Formula**:
+* **Single Sample Input**: `std::vector<double>` (1D vector)
 
-  $$
-  CE = -\frac{1}{N} \sum_{i=1}^{N} \sum_{j=1}^{C} y_{true}^{(i,j)} \log(y_{pred}^{(i,j)})
-  $$
-* **Returns**: `double` (Cross-Entropy loss)
-* **Note**: Only true class probabilities are considered (one-hot labels assumed).
+* **Batch Input**: `std::vector<std::vector<double>>` (2D matrix)
 
-#### **Derivative:**
+* **Error Checks**:
 
-* **Function**: `cross_entropy_derivative(const vector<vector<double>> &y_true, const vector<vector<double>> &y_pred)`
-* **Returns**:
+  * Shape matching (`y_true.size() == y_pred.size()`)
+  * Non-empty vectors/batches
+  * Consistent batch row sizes
 
-  $$
-  \frac{y_{pred} - y_{true}}{N}
-  $$
+* **Cross Entropy & BCE**:
+
+  * Supports raw logits via `from_logits=true`
+  * Automatically applies **sigmoid** (BCE) or **softmax** (Cross Entropy) when required.
 
 ---
 
-### 5. **Hinge Loss (SVM)**
-
-* **Function**: `hinge_loss(const vector<vector<double>> &y_true, const vector<vector<double>> &y_pred)`
-* **Description**: Computes the hinge loss for both binary and multi-class classification (SVM style).
-* **Formula (Binary)**:
-
-  $$
-  Hinge = \frac{1}{N} \sum_{i=1}^{N} \max(0, 1 - y_{true}^{(i)} \cdot y_{pred}^{(i)})
-  $$
-* **Formula (Multi-class)**:
-
-  $$
-  Hinge = \frac{1}{N} \sum_{i=1}^{N} \sum_{j \ne y_{true}} \max(0, 1 - (y_{pred}^{(y_{true})} - y_{pred}^{(j)}))
-  $$
-* **Returns**: `double` (Hinge Loss)
-
-#### **Derivative:**
-
-* **Function**: `hinge_loss_derivative(const vector<vector<double>> &y_true, const vector<vector<double>> &y_pred)`
-* **Returns**:
-
-  * Binary case:
-
-    $$
-    \frac{-y_{true}}{N} \quad \text{if margin < 1}
-    $$
-  * Multi-class case: Gradient applied to correct and incorrect classes based on margin violations.
+## 📚 **Available Loss Functions**
 
 ---
 
-## **Error Handling:**
+## 🔹 1. **Mean Squared Error (MSE)**
 
-* All functions check for:
+| Function                 | Description                       |
+| ------------------------ | --------------------------------- |
+| `mse_loss()`             | Single sample MSE                 |
+| `mse_loss_batch()`       | Batch MSE (averaged over samples) |
+| `mse_derivative()`       | Gradient for single sample        |
+| `mse_derivative_batch()` | Gradient for batch                |
 
-  * Matching shapes of `y_true` and `y_pred`
-  * Non-zero batch size and class size
-  * Consistent row sizes within `y_true` and `y_pred`
-* `std::invalid_argument` exceptions are thrown on violations.
+#### **Loss Formula**:
+
+$$
+MSE = \frac{1}{C} \sum_{j=1}^{C} \left( y_{true}^{(j)} - y_{pred}^{(j)} \right)^2
+$$
+
+#### **Derivative (Per Element)**:
+
+$$
+\frac{\partial L}{\partial y_{pred}} = \frac{2}{C} \left( y_{pred} - y_{true} \right)
+$$
 
 ---
 
-## **Namespace:**
+## 🔹 2. **Mean Absolute Error (MAE)**
+
+| Function                 | Description                   |
+| ------------------------ | ----------------------------- |
+| `mae_loss()`             | Single sample MAE             |
+| `mae_loss_batch()`       | Batch MAE                     |
+| `mae_derivative()`       | Subgradient for single sample |
+| `mae_derivative_batch()` | Subgradient for batch         |
+
+#### **Loss Formula**:
+
+$$
+MAE = \frac{1}{C} \sum_{j=1}^{C} \left| y_{true}^{(j)} - y_{pred}^{(j)} \right|
+$$
+
+#### **Derivative (Subgradient)**:
+
+$$
+\frac{\partial L}{\partial y_{pred}} = \frac{sign(y_{pred} - y_{true})}{C}
+$$
+
+---
+
+## 🔹 3. **Binary Cross Entropy (BCE)**
+
+| Function                 | Description                  |
+| ------------------------ | ---------------------------- |
+| `bce_loss()`             | Single sample BCE            |
+| `bce_loss_batch()`       | Batch BCE                    |
+| `bce_derivative()`       | Derivative for single sample |
+| `bce_derivative_batch()` | Derivative for batch         |
+
+#### **Loss Formula**:
+
+$$
+BCE = -\frac{1}{C} \sum_{j=1}^{C} \left[ y_{true}^{(j)} \log(y_{pred}^{(j)}) + (1 - y_{true}^{(j)}) \log(1 - y_{pred}^{(j)}) \right]
+$$
+
+* If **`from_logits=true`**, predictions pass through **sigmoid** internally.
+
+#### **Derivative**:
+
+$$
+\frac{\partial L}{\partial y_{pred}} = \frac{(y_{pred} - y_{true})}{C \cdot y_{pred}(1 - y_{pred})}
+$$
+
+*(Logits handling includes scaling this via sigmoid derivative if `from_logits=true`.)*
+
+---
+
+## 🔹 4. **Categorical Cross Entropy (CE)**
+
+| Function                           | Description                  |
+| ---------------------------------- | ---------------------------- |
+| `cross_entropy_loss()`             | Single sample CE             |
+| `cross_entropy_loss_batch()`       | Batch CE                     |
+| `cross_entropy_derivative()`       | Derivative for single sample |
+| `cross_entropy_derivative_batch()` | Derivative for batch         |
+
+#### **Loss Formula**:
+
+$$
+CE = -\sum_{j=1}^{C} y_{true}^{(j)} \log(y_{pred}^{(j)})
+$$
+
+* If **`from_logits=true`**, applies **softmax** internally to logits.
+
+#### **Derivative**:
+
+$$
+\frac{\partial L}{\partial y_{pred}} = y_{pred} - y_{true}
+$$
+
+---
+
+## 🔹 5. **Hinge Loss (SVM)**
+
+| Function                   | Description                  |
+| -------------------------- | ---------------------------- |
+| `hinge_loss()`             | Single sample Hinge loss     |
+| `hinge_loss_batch()`       | Batch Hinge loss             |
+| `hinge_derivative()`       | Derivative for single sample |
+| `hinge_derivative_batch()` | Derivative for batch         |
+
+#### **Loss Formula**:
+
+$$
+Hinge = \frac{1}{C} \sum_{j=1}^{C} \max \left(0, 1 - y_{true}^{(j)} \cdot y_{pred}^{(j)} \right)
+$$
+
+#### **Derivative**:
+
+$$
+\frac{\partial L}{\partial y_{pred}} =
+\begin{cases}
+\frac{-y_{true}^{(j)}}{C} & \text{if } 1 - y_{true}^{(j)} \cdot y_{pred}^{(j)} > 0 \\
+0 & \text{otherwise}
+\end{cases}
+$$
+
+---
+
+## ⚠️ Error Handling
+
+✔️ Empty vector detection
+✔️ Size mismatch (throws `std::invalid_argument`)
+✔️ Batch shape consistency
+
+---
+
+## 🛠️ **Problems Faced & Solutions**
+
+| Problem                                              | Solution                                                                                                                      |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Handling derivative for softmax activation           | Decided to throw an explicit exception in derivative function; derivative handled with cross-entropy for numerical stability. |
+| Inconsistent batch sizes causing crashes             | Added strict size and shape checks before computation; throws exceptions if mismatched.                                       |
+| Correctly supporting logits vs probability inputs    | Introduced `from_logits` flag to toggle internal sigmoid/softmax application to raw model outputs.                            |
+| Managing zero division in BCE derivative calculation | Added epsilon-clamping in denominator to avoid division by zero in edge cases.                                                |
+| Ensuring correct sign in hinge loss derivative       | Carefully tested sign logic against known SVM hinge loss gradients.                                                           |
+
+---
+
+## 📚 **Key Learnings**
+
+* Loss functions must validate inputs thoroughly to avoid runtime errors and inconsistent training results.
+* Handling logits internally improves numerical stability and user convenience.
+* Softmax derivative is complex and best combined with cross-entropy loss for efficiency and correctness.
+* Clear exception handling aids debugging and guides users toward proper API usage.
+* Batch versions improve performance but require careful shape management.
+
+---
+
+## 🏷️ Namespace
 
 ```
 Losses
 ```
+
+---
+
+## ⏳ **Future Improvements (To-Do)**
+
+* [ ] Add support for **weighted loss functions**.
+* [ ] Implement **multi-label BCE**.
+* [ ] Provide **loss reduction modes** (mean, sum, none).
+* [ ] Support **masking** for padded sequences.

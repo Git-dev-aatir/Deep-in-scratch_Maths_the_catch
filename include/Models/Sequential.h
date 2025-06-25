@@ -1,114 +1,94 @@
-#ifndef SEQUENTIAL_H
-#define SEQUENTIAL_H
+#pragma once
 
 #include <vector>
 #include <iostream>
-#include "../Layers/Activation.h"
-#include "../Layers/Dense.h"
+#include "../Layers/Layers.h"
 #include "../Optimizers/Optim.h"
-#include "../Optimizers/BatchGD.h"
-#include "../Optimizers/SGD.h"
 
-using std::vector;
-using std::cout;
-using std::endl;
+// Note : Sequential takes ownership of all layers within it 
+//        and these layer pointers or layer shouldn't be used anywhere else
+//        otherwise the destructor on destroying the layer may create a dangling pointer.
+
+// Note : Current assumption is that only dense layers are trainable by optimizers.
 
 /**
- * @brief Sequential container for stacking layers like in PyTorch.
+ * @brief Sequential container for stacking layers, similar to PyTorch.
  */
 class Sequential {
 private:
     /**
      * @brief Container to hold pointers to layers in the sequence.
      */
-    vector<Layer*> layers;
+    std::vector<BaseLayer*> layers;
+
+    /**
+     * @brief Flag to track initialization of parameters.
+     */
+    bool is_initialized = false;
+
+    /**
+     * @brief Base case for recursive unpacking of variadic template arguments.
+     * 
+     * This function is called when no more arguments are left to unpack.
+     */
+    void addLayers() {} // Base case - do nothing
+
+    /**
+     * @brief Recursively unpacks the variadic template arguments and adds each Layer pointer to the model.
+     * 
+     * @tparam First Type of the first argument (should be derived from Layer*).
+     * @tparam Rest Variadic template parameter pack for remaining arguments.
+     * @param first Pointer to the first Layer to be added.
+     * @param rest Remaining Layer pointers to be processed recursively.
+     */
+    template<typename First, typename... Rest>
+    void addLayers(First first, Rest... rest) {
+        this->layers.push_back(first);
+        this->addLayers(rest...); // Recursive unpacking
+    }
 
 public:
+    
     /**
-     * @brief Default constructor for Sequential model.
-     */
-    Sequential() {}
-
-    /**
-     * @brief Adds a new layer to the model.
+     * @brief Variadic template constructor to accept any number of Layer pointers.
      * 
-     * @param layer Pointer to the layer to add.
+     * This constructor allows initializing the Sequential model with any number of
+     * layers directly at the time of object creation.
+     * 
+     * @tparam Layers Variadic template parameter representing types derived from Layer*.
+     * @param args Pointers to Layer objects to be added to the model.
      */
-    void addLayer(Layer* layer) {
-        layers.push_back(layer);
+    template<typename... Layers>
+    Sequential(Layers... args) {
+        this->addLayers(args...);
     }
 
     /**
-     * @brief Initializes the weights and biases of Dense layers based on the next ActivationLayer.
+     * @brief Initializes weights and biases of Dense layers based on their subsequent ActivationLayers.
      * 
-     * Uses sensible defaults:
+     * Chooses initialization method based on the next activation type:
      * - He for ReLU / Leaky ReLU
      * - Xavier for Sigmoid / Tanh
      * - LeCun for SELU
      * - Xavier as safe fallback
      * 
      * @param seed Random seed for reproducibility.
-     * @param a Lower bound for UNIFORM or mean for NORMAL distribution.
-     * @param b Upper bound for UNIFORM or variance for NORMAL distribution.
+     * @param a Lower bound for uniform or mean for normal distribution.
+     * @param b Upper bound for uniform or variance for normal distribution.
      * @param sparsity Fraction of weights to be set to zero.
-     * @param bias_value Constant bias value if using BIAS initialization.
+     * @param bias_value Constant bias value for biases.
      */
     void initializeParameters(unsigned int seed = MANUAL_SEED, 
-                              double a = 0, double b = 1.0,
-                              double sparsity = 0.0, double bias_value = 0.0) 
-    {
-        for (size_t i = 0; i < layers.size(); ++i) {
-            Dense* dense_layer = dynamic_cast<Dense*>(layers[i]);
-            if (dense_layer) {
-                // Default to Xavier
-                InitMethod method = InitMethod::XAVIER_NORMAL;
-
-                // Check the next layer if it's an ActivationLayer
-                if (i + 1 < layers.size()) {
-                    ActivationLayer* act_layer = dynamic_cast<ActivationLayer*>(layers[i + 1]);
-                    if (act_layer) {
-                        ActivationType act_type = act_layer->getActivationType();
-
-                        switch (act_type) {
-                            case ActivationType::RELU:
-                            case ActivationType::LEAKY_RELU:
-                                method = InitMethod::HE_NORMAL;
-                                break;
-
-                            case ActivationType::SIGMOID:
-                            case ActivationType::TANH:
-                                method = InitMethod::XAVIER_NORMAL;
-                                break;
-
-                            case ActivationType::SELU:
-                                method = InitMethod::LECUN_NORMAL;
-                                break;
-
-                            default:
-                                method = InitMethod::XAVIER_NORMAL; // safe fallback
-                        }
-                    }
-                }
-
-                dense_layer->initializeWeights(method, seed, a, b, sparsity, bias_value);
-                dense_layer->initializeBiases(InitMethod::BIAS, seed, a, b, sparsity, bias_value); // Biases set separately (default zero)
-            }
-        }
-    }
+                            double a = 0, double b = 1.0, 
+                            double sparsity = 0.0, double bias_value = 0.1);
 
     /**
      * @brief Performs a forward pass through all layers.
      * 
-     * @param input Input vector to the model.
-     * @return Output vector after passing through all layers.
+     * @param input Input vector of doubles.
+     * @return Output vector after passing through the model.
      */
-    vector<double> forward(const vector<double>& input) {
-        vector<double> output = input;
-        for (Layer* layer : layers) {
-            output = layer->forward(output);
-        }
-        return output;
-    }
+    std::vector<double> forward(const std::vector<double>& input) const;
 
     /**
      * @brief Performs a backward pass through all layers.
@@ -117,75 +97,52 @@ public:
      * @param learning_rate Learning rate for parameter updates.
      * @return Gradient of the loss with respect to the model input.
      */
-    vector<double> backward(const vector<double>& grad_output, double learning_rate = 0.01) {
-        vector<double> grad = grad_output;
-        for (auto it = layers.rbegin(); it != layers.rend(); ++it) {
-            grad = (*it)->backward(grad, learning_rate);
-        }
-        return grad;
-    }
+    std::vector<double> backward(const std::vector<double>& grad_output, 
+                                 double learning_rate = 0.01);
 
-/**
- * @brief Performs a training step over a batch of samples.
- * 
- * @param X Batch of input samples (2D vector).
- * @param Y_true Batch of true labels (2D vector).
- * @param loss_func Pointer to the loss function.
- * @param loss_derivative Pointer to the loss derivative function.
- * @param optimizer Pointer to the optimizer.
- * @return Average loss over the batch.
- */
-double train(const vector<vector<double>>& X,
-             const vector<vector<double>>& Y_true,
-             double (*loss_func)(const vector<vector<double>>&, const vector<vector<double>>&),
-             vector<vector<double>> (*loss_derivative)(const vector<vector<double>>&, const vector<vector<double>>&),
-             Optimizer* optimizer) 
-{
-    size_t batch_size = X.size();
-    vector<vector<double>> outputs;
-    for (const auto& sample : X) {
-        outputs.push_back(forward(sample));
-    }
+    /**
+     * @brief Performs a training step over a batch of samples with multi-dimensional labels (per-sample loss).
+     * 
+     * The actual training loop is delegated to the optimizer via train_batch().
+     * 
+     * @param X Batch of input samples (2D vector of doubles).
+     * @param Y_true Batch of true labels (2D vector of doubles).
+     * @param loss_func Pointer to the per-sample loss function.
+     * @param loss_derivative Pointer to the per-sample loss derivative function.
+     * @param optimizer Pointer to the optimizer that will perform the training loop.
+     * @return Average loss over the batch.
+     */
+    double train(const std::vector<std::vector<double>>& X,
+                const std::vector<std::vector<double>>& Y_true,
+                double (*loss_func)(const std::vector<double>&, const std::vector<double>&),
+                std::vector<double> (*loss_derivative)(const std::vector<double>&, const std::vector<double>&),
+                Optimizer* optimizer);
 
-    double loss = loss_func(Y_true, outputs);
-    auto grad_output = loss_derivative(Y_true, outputs);
-
-    // Backward pass (per sample)
-    for (size_t i = 0; i < batch_size; ++i) {
-        backward(grad_output[i]); // assume backward accepts 1 sample
-    }
-
-    // Update weights (global)
-    vector<Dense*> dense_layers;
-    for (Layer* layer : layers) {
-        Dense* dense = dynamic_cast<Dense*>(layer);
-        if (dense) dense_layers.push_back(dense);
-    }
-    optimizer->step(dense_layers); // Passing vector<Dense*>
-
-
-    return loss;
-}
-
+    /**
+     * @brief Performs a training step over a batch of samples using batch-aware loss functions.
+     * 
+     * Supports fully vectorized batch loss and derivative computations for efficiency.
+     * 
+     * @param X Batch of input samples (2D vector of doubles).
+     * @param Y_true Batch of true labels (2D vector of doubles).
+     * @param loss_func Pointer to the batch loss function.
+     * @param loss_derivative Pointer to the batch loss derivative function.
+     * @param optimizer Pointer to the optimizer that will perform the training loop.
+     * @return Average loss over the batch.
+     */
+    double train(const std::vector<std::vector<double>>& X,
+                 const std::vector<std::vector<double>>& Y_true,
+                 double (*loss_func)(const std::vector<std::vector<double>>&, const std::vector<std::vector<double>>&),
+                 std::vector<std::vector<double>> (*loss_derivative)(const std::vector<std::vector<double>>&, const std::vector<std::vector<double>>&),
+                 Optimizer* optimizer);
 
     /**
      * @brief Prints a summary of the model architecture.
      */
-    void summary() const {
-        cout << "Sequential Model Summary:\n";
-        for (const Layer* layer : layers) {
-            layer->summary();
-        }
-    }
+    void summary() const;
 
     /**
      * @brief Destructor to release dynamically allocated layers.
      */
-    ~Sequential() {
-        for (Layer* layer : layers) {
-            delete layer;
-        }
-    }
+    ~Sequential();
 };
-
-#endif // SEQUENTIAL_H

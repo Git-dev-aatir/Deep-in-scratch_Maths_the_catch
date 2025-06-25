@@ -1,39 +1,24 @@
 #ifndef BATCH_GD_H
 #define BATCH_GD_H
 
-#include "./Optim.h"
+#include "BaseOptim.h"
 
 /**
  * @brief Batch Gradient Descent Optimizer.
+ * 
+ * Updates parameters after processing the entire batch.
  */
-class BatchGradientDescent : public Optimizer {
+class BatchGD : public Optimizer {
 public:
     /**
-     * @brief Constructor for BatchGradientDescent.
-     * @param lr Learning rate.
+     * @brief Constructor for BatchGD.
+     * @param lr Learning rate (default 0.01).
      */
-    BatchGradientDescent(double lr = 0.01) : Optimizer(lr) {}
+    explicit BatchGD(double lr = 0.01);
 
-    /**
-     * @brief Perform a batch gradient descent step for a Dense layer.
-     * @param layer Vector of pointers to all Dense layers.
-     */
-    void step(std::vector<Dense*>& layers) override {
-        for (Dense* layer : layers) {
-            const auto& grad_weights = layer->getGradWeights();
-            const auto& grad_biases = layer->getGradBiases();
-
-            auto& weights = const_cast<std::vector<std::vector<double>>&>(layer->getWeights());
-            auto& biases = const_cast<std::vector<double>&>(layer->getBiases());
-
-            for (size_t i = 0; i < weights.size(); ++i) {
-                for (size_t j = 0; j < weights[i].size(); ++j) {
-                    weights[i][j] -= learning_rate * grad_weights[i][j];
-                }
-                biases[i] -= learning_rate * grad_biases[i];
-            }
-        }
-    }
+    void step(std::vector<DenseLayer*>& layers) override;
+    void step_per_sample(std::vector<DenseLayer*>& layers) override;
+    void step_after_batch(std::vector<DenseLayer*>& layers) override;
 };
 
 #endif // BATCH_GD_H
