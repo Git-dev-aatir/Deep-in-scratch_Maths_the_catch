@@ -67,7 +67,7 @@ int main() {
     size_t epochs = 100;
     
     // Create optimizer
-    const double base_lr = 0.0001;
+    const double base_lr = 0.0003;
     const size_t base_batch_size = 32;
     const size_t batches_per_epoch = ceil(static_cast<double>(X_train.rows()) / base_batch_size);
     const size_t total_steps = epochs * batches_per_epoch;
