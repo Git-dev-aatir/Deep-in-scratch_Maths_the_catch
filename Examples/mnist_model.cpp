@@ -51,15 +51,15 @@ int main() {
     y_test.toOneHot();
     
     // Build model
-    size_t hidden_unit = 10;  // Increased capacity
+    size_t hidden_unit1 = 512, hidden_unit2 = 256, hidden_unit3 = 128;  // Increased capacity
     Sequential model(
-        std::make_unique<DenseLayer>(X_train.cols(), hidden_unit),
+        std::make_unique<DenseLayer>(X_train.cols(), hidden_unit1),
         std::make_unique<ActivationLayer>(ActivationType::SELU),
-        std::make_unique<DenseLayer>(hidden_unit, hidden_unit),
+        std::make_unique<DenseLayer>(hidden_unit1, hidden_unit2),
         std::make_unique<ActivationLayer>(ActivationType::SELU),
-        std::make_unique<DenseLayer>(hidden_unit, hidden_unit),
+        std::make_unique<DenseLayer>(hidden_unit2, hidden_unit3),
         std::make_unique<ActivationLayer>(ActivationType::SELU),
-        std::make_unique<DenseLayer>(hidden_unit, y_train.cols())
+        std::make_unique<DenseLayer>(hidden_unit3, y_train.cols())
     );
     model.initializeParameters(21);
     model.summary();
