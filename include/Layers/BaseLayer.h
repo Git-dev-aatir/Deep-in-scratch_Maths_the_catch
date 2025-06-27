@@ -25,7 +25,7 @@ public:
      * @param learning_rate Learning rate used for updating parameters (if applicable).
      * @return Gradient vector with respect to the input of this layer.
      */
-    virtual std::vector<double> backward(const std::vector<double>& grad_output, double lr) = 0;
+    virtual std::vector<double> backward(const std::vector<double>& grad_output) = 0;
 
     /**
      * @brief Prints a summary of the layer.

@@ -29,32 +29,54 @@ std::vector<double> mae_derivative(const std::vector<double>& y_true, const std:
     return grad;
 }
 
-double mae_loss_batch(const std::vector<std::vector<double>>& y_true, const std::vector<std::vector<double>>& y_pred) {
+double mae_loss_batch(const std::vector<std::vector<double>>& y_true, 
+                      const std::vector<std::vector<double>>& y_pred) {
     if (y_true.empty() || y_true.size() != y_pred.size())
         throw std::invalid_argument("MAE Batch: Size mismatch or empty batch.");
-    double total = 0.0;
-    for(size_t i = 0; i < y_true.size(); ++i) {
-        if(y_true[i].empty() || y_true[i].size() != y_pred[i].size())
-            throw std::invalid_argument("MAE Batch: Size mismatch or empty vector at '" + std::to_string(i) + "' index.");
-        for(size_t j = 0; j < y_true[i].size(); ++j)
-            total += std::abs(y_true[i][j] - y_pred[i][j]);
+    
+    double total_abs = 0.0;
+    size_t total_elements = 0;
+    
+    for (size_t i = 0; i < y_true.size(); ++i) {
+        if (y_true[i].empty() || y_true[i].size() != y_pred[i].size())
+            throw std::invalid_argument("MAE Batch: Size mismatch at index " + std::to_string(i));
+        
+        total_elements += y_true[i].size();
+        for (size_t j = 0; j < y_true[i].size(); ++j)
+            total_abs += std::abs(y_true[i][j] - y_pred[i][j]);
     }
-    return total / (2 * y_true.size() * y_true[0].size());
+    
+    return total_abs / total_elements;
 }
 
-std::vector<std::vector<double>> mae_derivative_batch(const std::vector<std::vector<double>>& y_true,
-                                                      const std::vector<std::vector<double>>& y_pred) {
+std::vector<std::vector<double>> mae_derivative_batch(
+    const std::vector<std::vector<double>>& y_true,
+    const std::vector<std::vector<double>>& y_pred) 
+{
     if (y_true.empty() || y_true.size() != y_pred.size())
         throw std::invalid_argument("MAE Derivative Batch: Size mismatch or empty batch.");
+    
+    // Compute total elements first
+    size_t total_elements = 0;
+    for (const auto& vec : y_true) {
+        total_elements += vec.size();
+    }
+    
     std::vector<std::vector<double>> grads(y_true.size());
-    for(size_t i = 0; i < y_true.size(); ++i) {
-        if(y_true[i].empty() || y_true[i].size() != y_pred[i].size())
-            throw std::invalid_argument("MSE Derivative Batch: Size mismatch or empty vector at '" + std::to_string(i) + "' index.");
-        std::vector<double> grad_i(y_true.size());
-        for(size_t j = 0; j < y_true[j].size(); ++j) {
-            grad_i[j] = (y_pred[i] > y_true[i]) ? 1.0 : (y_pred[i] < y_true[i]) ? -1.0 : 0.0;
-            grad_i[j] /= y_pred[i].size();
-        }   
+    
+    for (size_t i = 0; i < y_true.size(); ++i) {
+        if (y_true[i].empty() || y_true[i].size() != y_pred[i].size())
+            throw std::invalid_argument("MAE Derivative Batch: Size mismatch at index " + std::to_string(i));
+        
+        std::vector<double> grad_i(y_true[i].size());  // Correct size
+        
+        for (size_t j = 0; j < y_true[i].size(); ++j) {
+            grad_i[j] = (y_pred[i] > y_true[i]) ? 1.0 : 
+                            (y_pred[i] < y_true[i]) ? -1.0 : 0.0;
+            
+            // Scale by total elements in batch
+            grad_i[j] /= total_elements;
+        }
         grads[i] = grad_i;
     }
     return grads;

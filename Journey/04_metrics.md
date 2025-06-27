@@ -6,106 +6,164 @@
 
 The **Metrics** module provides functionality for **evaluating** and **analyzing** datasets and model outputs. It currently includes:
 
-* **Loss functions** (detailed separately in `03_losses.md`)
+* **Loss functions** (detailed separately in [`Losses.md`](Losses.md))
 * **Correlation analysis tools**
 
-This document summarizes the **Correlation utilities** alongside a brief overview of the Metrics folder organization.
+This document focuses on **Correlation utilities** and the Metrics folder organization.
 
 ---
 
 ## 📂 Folder Structure
 
-| File                                   | Description                                                         |
-| -------------------------------------- | ------------------------------------------------------------------- |
-| `include/Metrics/Losses.h`             | Declarations of loss functions and derivatives (see `03_losses.md`) |
-| `include/Metrics/Correlations.h`       | Declarations of correlation analysis functions                      |
-| `src/Metrics/Losses/mse.cpp`           | Mean Squared Error loss implementation                              |
-| `src/Metrics/Losses/mae.cpp`           | Mean Absolute Error loss implementation                             |
-| `src/Metrics/Losses/bce.cpp`           | Binary Cross Entropy loss implementation                            |
-| `src/Metrics/Losses/cross_entropy.cpp` | Categorical Cross Entropy loss implementation                       |
-| `src/Metrics/Losses/hinge.cpp`         | Hinge loss implementation                                           |
-| `src/Metrics/correlations.cpp`         | Correlation matrix and correlation utilities implementation         |
+| File                                   | Description                                                                 |
+| -------------------------------------- | --------------------------------------------------------------------------- |
+| `include/Metrics/Losses.h`             | Loss functions and derivatives (see [`Losses.md`](Losses.md))               |
+| `include/Metrics/Correlations.h`       | Correlation analysis functions                                               |
+| `src/Metrics/Losses/mse.cpp`           | Mean Squared Error loss implementation                                      |
+| `src/Metrics/Losses/mae.cpp`           | Mean Absolute Error loss implementation                                     |
+| `src/Metrics/Losses/bce.cpp`           | Binary Cross Entropy loss implementation                                    |
+| `src/Metrics/Losses/cross_entropy.cpp` | Categorical Cross Entropy loss implementation                               |
+| `src/Metrics/Losses/hinge.cpp`         | Hinge loss implementation                                                   |
+| `src/Metrics/correlations.cpp`         | Correlation matrix and utilities implementation                             |
 
 ---
 
 ## 🔍 Correlation Utilities
 
-These utilities assist in statistical analysis by computing **Pearson correlation coefficients** among dataset features or between features and a target.
+These utilities compute **Pearson correlation coefficients** for statistical analysis:
 
-### Features
+### Core Features
+* **Pearson Correlation Matrix**: Pairwise correlations between all dataset features
+* **Target Correlation**: Feature correlations with specified target column/vector
+* **Reporting Tools**:
+  - Sorted correlations (by absolute value)
+  - Highly correlated feature pairs (multicollinearity detection)
 
-* **Pearson Correlation Matrix**
-  Computes pairwise correlations between all columns (features) of a numeric dataset.
-
-* **Correlation with Target Attribute**
-  Computes correlation of each feature column with a specified target column.
-
-* **Correlation with External Target Vector**
-  Computes correlation of each feature column with an externally provided target vector.
-
-* **Reporting Utilities**
-
-  * Print correlations sorted by absolute values (ascending or descending).
-  * Print pairs of features with high absolute correlation (above a threshold), useful for identifying multicollinearity.
-
----
-
-## 📖 Function Summaries
+### Function Specifications
 
 | Function                                                                             | Description                                                                                                        |
 | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `computeCorrelationMatrix<T>(const vector<vector<T>>&)`                              | Returns a 2D matrix of Pearson correlations between all columns.                                                   |
-| `computeCorrelationWithAttribute<T>(const vector<vector<T>>&, int)`                  | Returns correlations between each column and the specified target column. Defaults to last column if not provided. |
-| `computeCorrelationWithTarget<T>(const vector<vector<T>>&, const vector<T>&)`        | Returns correlations between each column and an external target vector.                                            |
-| `printSortedCorrelations(const vector<double>&, bool ascending=false)`               | Prints sorted correlations by absolute value; descending by default.                                               |
-| `printHighlyCorrelatedFeatures(const vector<vector<double>>&, double threshold=0.8)` | Prints all feature pairs with correlation magnitude above threshold, sorted by index pairs.                        |
+| `computeCorrelationMatrix<T>(const vector<vector<T>>&)`                              | Returns 2D correlation matrix between all columns                                                                  |
+| `computeCorrelationWithAttribute<T>(const vector<vector<T>>&, int)`                  | Correlations with target column (default: last column)                                                             |
+| `computeCorrelationWithTarget<T>(const vector<vector<T>>&, const vector<T>&)`        | Correlations with external target vector                                                                           |
+| `printSortedCorrelations(const vector<double>&, bool ascending=false)`               | Prints correlations sorted by absolute value (descending default)                                                  |
+| `printHighlyCorrelatedFeatures(const vector<vector<double>>&, double threshold=0.8)` | Prints feature pairs with \|corr\| > threshold (sorted by index pairs)                                            |
 
 ---
 
-## ⚠️ Notes and Usage
+## ⚠️ Usage Notes & Assumptions
 
-* Template functions support numeric types such as `int` and `double`.
-* Assumes datasets are rectangular matrices (consistent row and column counts).
-* Uses unbiased standard deviation and covariance calculations (dividing by N-1).
-* Designed for use in exploratory data analysis, feature selection, and data quality assessment.
-* Printing functions write to `std::cout` directly; redirect or adapt as needed.
+1. **Data Requirements**:
+   - Rectangular matrices (consistent row/column counts)
+   - Numeric types (`int`, `double`, `float`)
+   - No missing values (handling not implemented)
 
----
+2. **Statistical Methods**:
+   - Unbiased estimation (N-1 denominator)
+   - Pearson correlation formula:
+     $$
+     r = \frac{\sum (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum (x_i - \bar{x})^2 \sum (y_i - \bar{y})^2}}
+     $$
 
-## 🛠️ **Problems Faced & Solutions**
-
-| Problem                                                           | Solution                                                                                             |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Handling division by zero when computing standard deviation       | Added check to skip computation or set correlation to zero if variance is zero to avoid NaN results. |
-| Ensuring template functions support both `int` and `double` types | Used static\_cast<double> to ensure internal computation in floating point for precision.            |
-| Detecting inconsistent row sizes in datasets                      | Introduced strict assertions and runtime checks to verify that all rows have equal lengths.          |
-| Printing cleanly sorted feature correlations                      | Used `std::pair` with index tracking and custom sorting to display features by absolute correlation. |
-| Overlapping feature pairs reported in high correlation function   | Applied careful double-loop bounds and index ordering to avoid duplicate or redundant feature pairs. |
-
----
-
-## 📚 **Key Learnings**
-
-* **Robustness checks** (like variance zero-handling) are crucial in statistical computations to prevent runtime crashes or invalid values.
-* **Templates require explicit casting** to maintain calculation precision across `int`, `float`, `double` without ambiguity.
-* Proper **sorting and indexing of feature pairs** makes high-correlation reporting meaningful and user-friendly.
-* Dataset **rectangularity (consistent row lengths)** must be validated before computation to ensure algorithm correctness.
-* Diagnostic **print utilities** simplify exploratory data analysis and are useful beyond development/testing phases.
+3. **Error Handling**:
+   - Throws `std::invalid_argument` for:
+     - Empty datasets
+     - Size mismatches
+     - Invalid column indices
+   - Returns 0 correlation for zero-variance features
 
 ---
 
-## 🏷️ Namespace
+## 🛠️ Development Journey
 
+### Key Challenges & Solutions
+| Challenge                                                      | Solution                                                                                              |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Division by zero** in standard deviation                     | Added variance threshold (1e-10) → set correlation=0                                                  |
+| **Template type support** (int/double)                         | Used `static_cast<double>` for internal calculations                                                   |
+| **Inconsistent row sizes**                                     | Implemented `getShape()` with rectangularity validation                                               |
+| **Inefficient correlation matrix** computation (O(n³))         | Optimized to O(n²) with covariance reuse                                                              |
+| **Duplicate feature pairs** in high-correlation reporting      | Used upper triangular iteration (j > i)                                                               |
+
+### Performance Optimizations
+1. **Covariance Matrix First**:
 ```
-Metrics
+auto cov = computeCovarianceMatrix(data);
+auto corr = convertToCorrelation(cov);
 ```
+2. **Single-Pass Statistics**:
+- Precompute means and variances together
+3. **Symmetric Matrix Handling**:
+- Compute only upper triangle
+- Mirror results to lower triangle
+
+### Key Insights
+- **Validation First**: 100% input validation prevents runtime errors
+- **Numerical Safety**: Zero-variance handling avoids NaNs
+- **API Design**: Unified interface for different target types
+- **Debugging**: Added detailed error messages with indexes
+- **Testing**: Verified against NumPy's `np.corrcoef`
 
 ---
 
-## ⏳ **Future Enhancements**
+## 📚 Key Learnings
 
-* Support for other correlation measures (Spearman, Kendall Tau)
-* Handling missing or NaN values gracefully
-* Configurable output streams for print functions
-* Parallelized or optimized computation for large datasets
-* Integration with dataset loading utilities and feature metadata
+1. **Robustness > Performance**:
+- Zero-variance checks are crucial
+- Input validation prevents cryptic failures
+
+2. **Template Challenges**:
+- Explicit casting required for mixed-type safety
+- Explicit instantiations needed for linking
+
+3. **Optimization Path**:
+```mermaid
+graph LR;
+    A[Naive O-n³] --> B[Covariance Reuse];
+    B --> C[Symmetric Optimization];
+    C --> D[Batch Processing];
+```
+
+
+4. **API Design Principles**:
+- Consistent naming (`compute*` vs `print*`)
+- Sensible defaults (last column as target)
+- Const-correct parameters
+
+
+---
+
+## ⏳ Future Enhancements
+
+### High Priority
+| Feature                      | Description                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| **Missing Value Handling**   | NaN skipping/Imputation options                                             |
+| **Alternative Correlations** | Spearman, Kendall Tau, and Point-Biserial                                  |
+| **GPU Acceleration**         | CUDA implementation for large datasets                                      |
+| **Streaming API**            | Online correlation computation for incremental data                          |
+
+### Advanced Features
+| Feature                      | Description                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| **Sparse Matrix Support**    | Compressed formats for high-dimensional data                                |
+| **Statistical Significance** | p-value calculation for correlations                                        |
+| **Confidence Intervals**     | 95% CI reporting for correlation values                                    |
+| **Visualization Integration**| Plotting support (heatmaps, scatter matrices)                              |
+
+### Performance & Usability
+| Feature                      | Description                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| **Parallel Processing**      | OpenMP/Threading for multi-core systems                                    |
+| **Memory-Mapped Files**      | Out-of-core computation for huge datasets                                  |
+| **Configurable Output**      | CSV/JSON formatting options                                                |
+| **Python Bindings**          | Pybind11 interface for Python integration                                  |
+
+### Experimental
+| Feature                      | Description                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| **Auto-Correlation**         | Time-series lag analysis                                                    |
+| **Partial Correlation**      | Controlling for other variables                                            |
+| **Categorical Correlation**  | Cramer's V, Theil's U for mixed data types                                 |
+
+

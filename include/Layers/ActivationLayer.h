@@ -43,7 +43,7 @@ public:
      * @param lr The learning rate used for gradient descent.
      * @return A vector containing the gradients of the loss with respect to the inputs of this layer.
      */
-    std::vector<double> backward(const std::vector<double>& grad_output, double lr) override;
+    std::vector<double> backward(const std::vector<double>& grad_output) override;
     
     /**
      * @brief Prints the details of the activation layer.

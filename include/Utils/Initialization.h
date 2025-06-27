@@ -30,7 +30,7 @@ enum class InitMethod {
 double clamp(double val, double lo, double hi);
 
 /**
- * @brief Initializes a 2D weight matrix using the specified initialization method.
+ * @brief Initializes a 2D parameters matrix using the specified initialization method.
  * 
  * @param in_features Number of input features (columns).
  * @param out_features Number of output features (rows).
@@ -40,7 +40,7 @@ double clamp(double val, double lo, double hi);
  * @param b Upper bound (for uniform) or std deviation (for normal).
  * @param sparsity Fraction [0, 1] of weights to set to zero.
  * @param bias_value Constant value for bias initialization.
- * @return Initialized weight matrix.
+ * @return Initialized parameters matrix.
  */
 std::vector<std::vector<double>> initializeParameters(
     size_t in_features,

@@ -27,30 +27,45 @@ std::vector<double> mse_derivative(const std::vector<double>& y_true, const std:
     return grad;
 }
 
-double mse_loss_batch(const std::vector<std::vector<double>>& y_true, const std::vector<std::vector<double>>& y_pred) {
+double mse_loss_batch(const std::vector<std::vector<double>>& y_true, 
+                      const std::vector<std::vector<double>>& y_pred) {
     if(y_true.empty() || y_true.size() != y_pred.size())
         throw std::invalid_argument("MSE Batch: Size mismatch or empty batch.");
+    
+    size_t total_elements = 0;
     double total = 0.0;
+    
     for(size_t i = 0; i < y_true.size(); ++i) {
         if(y_true[i].empty() || y_true[i].size() != y_pred[i].size())
-            throw std::invalid_argument("MSE Batch: Size mismatch or empty vector at '" + std::to_string(i) + "' index.");
+            throw std::invalid_argument("MSE Batch: Size mismatch at index " + std::to_string(i));
+        
+        total_elements += y_true[i].size();
+        
         for(size_t j = 0; j < y_true[i].size(); ++j)
             total += std::pow(y_true[i][j] - y_pred[i][j], 2);
     }
-    return total / (2 * y_true.size() * y_true[0].size());
+    
+    return total / (2 * total_elements);  // Fixed denominator
 }
 
-std::vector<std::vector<double>> mse_derivative_batch(const std::vector<std::vector<double>>& y_true, 
-                                                      const std::vector<std::vector<double>>& y_pred) {
+std::vector<std::vector<double>> mse_derivative_batch(
+    const std::vector<std::vector<double>>& y_true, 
+    const std::vector<std::vector<double>>& y_pred) 
+{
     if(y_true.empty() || y_true.size() != y_pred.size())
         throw std::invalid_argument("MSE Derivative Batch: Size mismatch or empty batch.");
+    
     std::vector<std::vector<double>> grads(y_true.size());
+    
     for(size_t i = 0; i < y_true.size(); ++i) {
         if(y_true[i].empty() || y_true[i].size() != y_pred[i].size())
-            throw std::invalid_argument("MSE Derivative Batch: Size mismatch or empty vector at '" + std::to_string(i) + "' index.");
-        std::vector<double> grad_i(y_true.size());
-        for(size_t j = 0; j < y_true[j].size(); ++j)
+            throw std::invalid_argument("MSE Derivative Batch: Size mismatch at index " + std::to_string(i));
+        
+        std::vector<double> grad_i(y_true[i].size());
+        
+        for(size_t j = 0; j < y_true[i].size(); ++j)
             grad_i[j] = (y_pred[i][j] - y_true[i][j]) / y_true[i].size();
+        
         grads[i] = grad_i;
     }
     return grads;

@@ -1,25 +1,48 @@
 #pragma once
 
 #include <vector>
+#include <tuple>
 
 /**
- * @brief Computes the Pearson Correlation Matrix for a numeric dataset.
+ * @brief Computes dimensions of dataset with validation
  * 
- * @tparam T Numeric data type (int, double).
- * @param dataset The dataset represented as a vector of DataRow<T>.
- * @return A 2D vector (matrix) of doubles representing the correlation coefficients.
+ * @tparam T Numeric type
+ * @param dataset Input data matrix
+ * @return std::tuple<size_t, size_t> (rows, columns)
+ * @throws std::invalid_argument for inconsistent row sizes
+ */
+template<typename T>
+std::tuple<size_t, size_t> getShape(const std::vector<std::vector<T>>& dataset);
+
+/**
+ * @brief Computes covariance matrix for dataset
+ * 
+ * @tparam T Numeric type
+ * @param dataset Input data matrix
+ * @return std::vector<std::vector<double>> Covariance matrix
+ */
+template<typename T>
+std::vector<std::vector<double>> computeCovarianceMatrix(
+    const std::vector<std::vector<T>>& dataset);
+
+/**
+ * @brief Computes Pearson Correlation Matrix
+ * 
+ * @tparam T Numeric type
+ * @param dataset Input data matrix
+ * @return std::vector<std::vector<double>> Correlation matrix
  */
 template<typename T>
 std::vector<std::vector<double>> computeCorrelationMatrix(
     const std::vector<std::vector<T>>& dataset);
 
 /**
- * @brief Computes the Pearson correlation of all columns with a specified target column.
+ * @brief Computes Pearson correlation of all columns with a specified target column
  * 
- * @tparam T Numeric data type (int, double).
- * @param dataset The dataset as a vector of DataRow<T>.
- * @param target_col The index of the target column.
- * @return A vector of doubles where each value is the correlation with the target column.
+ * @tparam T Numeric type
+ * @param dataset Input data matrix
+ * @param target_col Index of target column
+ * @return std::vector<double> Correlation values
  */
 template<typename T>
 std::vector<double> computeCorrelationWithAttribute(
@@ -28,12 +51,12 @@ std::vector<double> computeCorrelationWithAttribute(
 );
 
 /**
- * @brief Computes the Pearson correlation of all columns with a specified target vector.
+ * @brief Computes Pearson correlation of all columns with a specified target vector
  * 
- * @tparam T Numeric data type (int, double).
- * @param dataset The dataset as a vector of DataRow<T>.
- * @param target The vector of target values or labels.
- * @return A vector of doubles where each value is the correlation with the target vector.
+ * @tparam T Numeric type
+ * @param dataset Input data matrix
+ * @param target Target vector
+ * @return std::vector<double> Correlation values
  */
 template<typename T>
 std::vector<double> computeCorrelationWithTarget(
@@ -42,10 +65,10 @@ std::vector<double> computeCorrelationWithTarget(
 );
 
 /**
- * @brief Prints correlations sorted by their absolute values in ascending or descending order.
+ * @brief Prints correlations sorted by absolute value
  * 
- * @param correlations Vector of correlation values.
- * @param ascending If true, sorts in ascending order; otherwise, descending.
+ * @param correlations Correlation values
+ * @param ascending Sort order (default descending)
  */
 void printSortedCorrelations(
     const std::vector<double>& correlations, 
@@ -53,11 +76,10 @@ void printSortedCorrelations(
 );
 
 /**
- * @brief Prints all pairs of features whose absolute correlation is above a given threshold,
- * sorted in descending order of their absolute correlation value.
+ * @brief Prints highly correlated feature pairs
  * 
- * @param correlationMatrix The square correlation matrix [n x n].
- * @param threshold Minimum absolute correlation to consider as "highly correlated". Default: 0.8.
+ * @param correlationMatrix Correlation matrix
+ * @param threshold Correlation threshold (default 0.8)
  */
 void printHighlyCorrelatedFeatures(
     const std::vector<std::vector<double>>& correlationMatrix, 

@@ -10,16 +10,15 @@ This module provides **loss functions** and their **derivatives**, used for trai
 
 ## 🔍 Overview
 
-✔️ Supports **single sample** and **batch** versions
-✔️ Handles **logits vs probabilities** (where applicable)
-✔️ Performs **input validation** (size, emptiness, shape consistency)
-✔️ Implements:
-
-* Mean Squared Error (MSE)
-* Mean Absolute Error (MAE)
-* Binary Cross Entropy (BCE)
-* Categorical Cross Entropy (CE)
-* Hinge Loss (SVM)
+✔️ Supports **single sample** and **batch** versions  
+✔️ Handles **logits vs probabilities** (where applicable)  
+✔️ Performs **input validation** (size, emptiness, shape consistency)  
+✔️ Implements:  
+* Mean Squared Error (MSE)  
+* Mean Absolute Error (MAE)  
+* Binary Cross Entropy (BCE)  
+* Categorical Cross Entropy (CE)  
+* Hinge Loss (SVM)  
 
 ---
 
@@ -38,20 +37,15 @@ This module provides **loss functions** and their **derivatives**, used for trai
 
 ## **General Notes**
 
-* **Single Sample Input**: `std::vector<double>` (1D vector)
-
-* **Batch Input**: `std::vector<std::vector<double>>` (2D matrix)
-
-* **Error Checks**:
-
-  * Shape matching (`y_true.size() == y_pred.size()`)
-  * Non-empty vectors/batches
-  * Consistent batch row sizes
-
-* **Cross Entropy & BCE**:
-
-  * Supports raw logits via `from_logits=true`
-  * Automatically applies **sigmoid** (BCE) or **softmax** (Cross Entropy) when required.
+* **Single Sample Input**: `std::vector<double>` (1D vector)  
+* **Batch Input**: `std::vector<std::vector<double>>` (2D matrix)  
+* **Error Checks**:  
+  * Shape matching (`y_true.size() == y_pred.size()`)  
+  * Non-empty vectors/batches  
+  * Consistent batch row sizes  
+* **Cross Entropy & BCE**:  
+  * Supports raw logits via `from_logits=true`  
+  * Automatically applies **sigmoid** (BCE) or **softmax** (Cross Entropy) when required  
 
 ---
 
@@ -70,15 +64,11 @@ This module provides **loss functions** and their **derivatives**, used for trai
 
 #### **Loss Formula**:
 
-$$
-MSE = \frac{1}{C} \sum_{j=1}^{C} \left( y_{true}^{(j)} - y_{pred}^{(j)} \right)^2
-$$
+$$ MSE = \frac{1}{C} \sum_{j=1}^{C} \left( y_{true}^{(j)} - y_{pred}^{(j)} \right)^2 $$
 
 #### **Derivative (Per Element)**:
 
-$$
-\frac{\partial L}{\partial y_{pred}} = \frac{2}{C} \left( y_{pred} - y_{true} \right)
-$$
+$$ \frac{\partial L}{\partial y_{pred}} = \frac{2}{C} \left( y_{pred} - y_{true} \right) $$
 
 ---
 
@@ -93,15 +83,11 @@ $$
 
 #### **Loss Formula**:
 
-$$
-MAE = \frac{1}{C} \sum_{j=1}^{C} \left| y_{true}^{(j)} - y_{pred}^{(j)} \right|
-$$
+$$ MAE = \frac{1}{C} \sum_{j=1}^{C} \left| y_{true}^{(j)} - y_{pred}^{(j)} \right| $$
 
 #### **Derivative (Subgradient)**:
 
-$$
-\frac{\partial L}{\partial y_{pred}} = \frac{sign(y_{pred} - y_{true})}{C}
-$$
+$$ \frac{\partial L}{\partial y_{pred}} = \frac{sign(y_{pred} - y_{true})}{C} $$
 
 ---
 
@@ -116,19 +102,15 @@ $$
 
 #### **Loss Formula**:
 
-$$
-BCE = -\frac{1}{C} \sum_{j=1}^{C} \left[ y_{true}^{(j)} \log(y_{pred}^{(j)}) + (1 - y_{true}^{(j)}) \log(1 - y_{pred}^{(j)}) \right]
-$$
+$$ BCE = -\frac{1}{C} \sum_{j=1}^{C} \left[ y_{true}^{(j)} \log(y_{pred}^{(j)}) + (1 - y_{true}^{(j)}) \log(1 - y_{pred}^{(j)}) \right] $$
 
-* If **`from_logits=true`**, predictions pass through **sigmoid** internally.
+* If **`from_logits=true`**, predictions pass through **sigmoid** internally
 
 #### **Derivative**:
 
-$$
-\frac{\partial L}{\partial y_{pred}} = \frac{(y_{pred} - y_{true})}{C \cdot y_{pred}(1 - y_{pred})}
-$$
+$$ \frac{\partial L}{\partial y_{pred}} = \frac{(y_{pred} - y_{true})}{C \cdot y_{pred}(1 - y_{pred})} $$
 
-*(Logits handling includes scaling this via sigmoid derivative if `from_logits=true`.)*
+*(Logits handling includes scaling via sigmoid derivative if `from_logits=true`)*
 
 ---
 
@@ -143,17 +125,13 @@ $$
 
 #### **Loss Formula**:
 
-$$
-CE = -\sum_{j=1}^{C} y_{true}^{(j)} \log(y_{pred}^{(j)})
-$$
+$$ CE = -\sum_{j=1}^{C} y_{true}^{(j)} \log(y_{pred}^{(j)}) $$
 
-* If **`from_logits=true`**, applies **softmax** internally to logits.
+* If **`from_logits=true`**, applies **softmax** internally to logits
 
 #### **Derivative**:
 
-$$
-\frac{\partial L}{\partial y_{pred}} = y_{pred} - y_{true}
-$$
+$$ \frac{\partial L}{\partial y_{pred}} = y_{pred} - y_{true} $$
 
 ---
 
@@ -168,49 +146,48 @@ $$
 
 #### **Loss Formula**:
 
-$$
-Hinge = \frac{1}{C} \sum_{j=1}^{C} \max \left(0, 1 - y_{true}^{(j)} \cdot y_{pred}^{(j)} \right)
-$$
+$$ Hinge = \frac{1}{C} \sum_{j=1}^{C} \max \left(0, 1 - y_{true}^{(j)} \cdot y_{pred}^{(j)} \right) $$
 
 #### **Derivative**:
 
-$$
-\frac{\partial L}{\partial y_{pred}} =
-\begin{cases}
-\frac{-y_{true}^{(j)}}{C} & \text{if } 1 - y_{true}^{(j)} \cdot y_{pred}^{(j)} > 0 \\
-0 & \text{otherwise}
-\end{cases}
-$$
+$$ \frac{\partial L}{\partial y_{pred}} = \begin{cases} \frac{-y_{true}^{(j)}}{C} & \text{if } 1 - y_{true}^{(j)} \cdot y_{pred}^{(j)} > 0 \\ 0 & \text{otherwise} \end{cases} $$
 
 ---
 
 ## ⚠️ Error Handling
 
-✔️ Empty vector detection
-✔️ Size mismatch (throws `std::invalid_argument`)
-✔️ Batch shape consistency
+✔️ Empty vector detection  
+✔️ Size mismatch (throws `std::invalid_argument`)  
+✔️ Batch shape consistency  
 
 ---
 
-## 🛠️ **Problems Faced & Solutions**
+## 🛠️ **Development Journey**
 
+### **Problems Faced & Solutions**
 | Problem                                              | Solution                                                                                                                      |
 | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Handling derivative for softmax activation           | Decided to throw an explicit exception in derivative function; derivative handled with cross-entropy for numerical stability. |
-| Inconsistent batch sizes causing crashes             | Added strict size and shape checks before computation; throws exceptions if mismatched.                                       |
-| Correctly supporting logits vs probability inputs    | Introduced `from_logits` flag to toggle internal sigmoid/softmax application to raw model outputs.                            |
-| Managing zero division in BCE derivative calculation | Added epsilon-clamping in denominator to avoid division by zero in edge cases.                                                |
-| Ensuring correct sign in hinge loss derivative       | Carefully tested sign logic against known SVM hinge loss gradients.                                                           |
+| Handling derivative for softmax activation           | Used combined cross-entropy + softmax derivative for numerical stability                                                      |
+| Inconsistent batch sizes                             | Added strict size/shape validation before computation                                                                         |
+| Logits vs probability inputs                         | Implemented `from_logits` flag with automatic sigmoid/softmax conversion                                                     |
+| Zero division in BCE                                 | Added epsilon-clamping (1e-7) to denominators                                                                                |
+| Hinge loss sign correctness                          | Verified against mathematical definition and reference implementations                                                        |
+
+### **Key Insights**
+- **Validation is Critical**: Rigorous input checking prevents subtle training failures  
+- **Numerical Stability**: Max-shift in softmax and epsilon guards are essential  
+- **API Design**: Unified interface for single/batch modes improves usability  
+- **Derivative Consistency**: Tested gradients against finite differences for correctness  
 
 ---
 
 ## 📚 **Key Learnings**
 
-* Loss functions must validate inputs thoroughly to avoid runtime errors and inconsistent training results.
-* Handling logits internally improves numerical stability and user convenience.
-* Softmax derivative is complex and best combined with cross-entropy loss for efficiency and correctness.
-* Clear exception handling aids debugging and guides users toward proper API usage.
-* Batch versions improve performance but require careful shape management.
+1. **Validation First**: Every loss function now validates inputs before computation  
+2. **Numerical Safety**: Implemented safeguards for extreme values (log(0), div/0)  
+3. **Batch Efficiency**: Optimized batch operations with pre-reserved memory  
+4. **Logits Handling**: Internal conversion simplifies user code and reduces errors  
+5. **Derivative Testing**: Used gradient checking to verify all implementations  
 
 ---
 
@@ -220,11 +197,27 @@ $$
 Losses
 ```
 
+
 ---
 
-## ⏳ **Future Improvements (To-Do)**
+## ⏳ **Future Improvements**
 
-* [ ] Add support for **weighted loss functions**.
-* [ ] Implement **multi-label BCE**.
-* [ ] Provide **loss reduction modes** (mean, sum, none).
-* [ ] Support **masking** for padded sequences.
+### High Priority
+* [ ] **Weighted Losses**: Class-weighted variants for imbalanced datasets
+* [ ] **Sparse Tensors**: Support for compressed representations
+* [ ] **Auto-Diff Integration**: Connect to computational graph engine
+
+### Advanced Features
+* [ ] **Multi-Label BCE**: Support for non-exclusive classes
+* [ ] **Loss Reduction Modes**: `mean` (default), `sum`, `none`
+* [ ] **Sequence Masking**: Ignore padded values in variable-length inputs
+
+### Performance
+* [ ] **GPU Acceleration**: CUDA implementations for large batches  
+* [ ] **Vectorization**: SIMD optimizations for CPU  
+* [ ] **Quantization**: FP16 support for memory efficiency  
+
+### Usability
+* [ ] **Loss Composites**: Focal loss, Dice loss, custom combinations  
+* [ ] **Debug Mode**: NaN/Inf detection with stack traces  
+* [ ] **Visualization**: Loss landscape plotting utilities  

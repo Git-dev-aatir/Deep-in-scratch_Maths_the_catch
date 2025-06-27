@@ -2,208 +2,244 @@
 #include <stdexcept>
 #include <iostream>
 #include <iomanip>
+#include <cmath> // For fabs
 
 DenseLayer::DenseLayer(size_t in_features, size_t out_features, bool init_params)
-    : input_size(in_features), output_size(out_features) 
+    : input_size(in_features), output_size(out_features)
 {
-    if (in_features == 0 || out_features == 0) {
-        throw std::invalid_argument("Layer dimensions must be positive");
+    if (in_features == 0 || out_features == 0)
+    {
+        throw std::invalid_argument("DenseLayer: Input and output features must be > 0");
     }
-    
-    if (init_params) {
-        this->weights.resize(this->output_size, std::vector<double>(this->input_size, 0.0));
-        this->biases.resize(this->output_size, 0.0);
+
+    // Initialize gradient storage
+    grad_weights.resize(output_size, std::vector<double>(input_size, 0.0));
+    grad_biases.resize(output_size, 0.0);
+
+    // Initialize parameters if requested
+    if (init_params)
+    {
+        weights.resize(output_size, std::vector<double>(input_size, 0.0));
+        biases.resize(output_size, 0.0);
     }
-    this->grad_weights.resize(this->output_size, std::vector<double>(this->input_size, 0.0));
-    this->grad_biases.resize(this->output_size, 0.0);
 }
 
 void DenseLayer::initializeWeights(InitMethod method, unsigned int seed,
-                                   double a, double b, double sparsity, double bias_value) {
-    if (this->weights.empty()) {
-        // Initialize weights if not already done
-        this->weights.resize(this->output_size, std::vector<double>(this->input_size, 0.0));
+                                   double a, double b, double sparsity, double bias_value)
+{
+    if (weights.empty())
+    {
+        weights.resize(output_size, std::vector<double>(input_size, 0.0));
     }
-    
-    this->weights = initializeParameters(this->input_size, this->output_size,
-                                         method, seed, a, b, sparsity, bias_value);
+
+    weights = initializeParameters(input_size, output_size, method, seed, a, b, sparsity, bias_value);
 }
 
 void DenseLayer::initializeBiases(InitMethod method, unsigned int seed,
-                                  double a, double b, double sparsity, double bias_value) {
-    if (this->biases.empty()) {
-        // Initialize biases if not already done
-        this->biases.resize(this->output_size, 0.0);
+                                  double a, double b, double sparsity, double bias_value)
+{
+    if (biases.empty())
+    {
+        biases.resize(output_size, 0.0);
     }
-    
-    std::vector<std::vector<double>> temp = initializeParameters(this->output_size, 1,
-                                                                 method, seed, a, b, sparsity, bias_value);
-    this->biases = temp[0];
+
+    // Initialize as matrix then convert to vector
+    auto temp = initializeParameters(output_size, 1, method, seed, a, b, sparsity, bias_value);
+
+    // Validate and convert
+    if (temp.size() != 1 || temp[0].size() != output_size)
+    {
+        throw std::runtime_error("Bias initialization returned incorrect dimensions");
+    }
+    biases = temp[0];
 }
 
-std::vector<double> DenseLayer::forward(const std::vector<double>& input) {
-    if (input.size() != this->input_size) {
-        throw std::invalid_argument("Input size mismatch. Expected " + 
-                                   std::to_string(this->input_size) + 
-                                   ", got " + std::to_string(input.size()));
+std::vector<double> DenseLayer::forward(const std::vector<double> &input)
+{
+    if (input.size() != input_size)
+    {
+        throw std::invalid_argument("DenseLayer::forward: Expected input size " +
+                                    std::to_string(input_size) + ", got " +
+                                    std::to_string(input.size()));
     }
-    
-    if (this->weights.empty() || this->biases.empty()) {
-        throw std::runtime_error("Layer weights/biases not initialized");
+
+    if (weights.empty() || biases.empty())
+    {
+        throw std::runtime_error("DenseLayer::forward: Weights/biases not initialized");
     }
-    
+
     // Cache input for backward pass
-    this->input_cache = input;
-    
+    input_cache = input;
+
+    // Pre-allocate output
+    std::vector<double> output(output_size, 0.0);
+
     // Compute output: y = Wx + b
-    std::vector<double> output(this->output_size, 0.0);
-    for (size_t i = 0; i < this->output_size; ++i) {
-        // Compute dot product of weights[i] and input
+    for (size_t i = 0; i < output_size; ++i)
+    {
         double sum = 0.0;
-        for (size_t j = 0; j < this->input_size; ++j) {
-            sum += this->weights[i][j] * input[j];
+        for (size_t j = 0; j < input_size; ++j)
+        {
+            sum += weights[i][j] * input[j];
         }
-        output[i] = sum + this->biases[i];
+        output[i] = sum + biases[i];
     }
-    
+
     return output;
 }
 
-std::vector<double> DenseLayer::backward(const std::vector<double>& grad_output, double lr) {
-    if (grad_output.size() != this->output_size) {
-        throw std::invalid_argument("Gradient output size mismatch. Expected " + 
-                                   std::to_string(this->output_size) + 
-                                   ", got " + std::to_string(grad_output.size()));
+std::vector<double> DenseLayer::backward(const std::vector<double> &grad_output)
+{
+    if (grad_output.size() != output_size)
+    {
+        throw std::invalid_argument("DenseLayer::backward: Expected grad_output size " +
+                                    std::to_string(output_size) + ", got " +
+                                    std::to_string(grad_output.size()));
     }
-    
-    if (this->input_cache.empty()) {
-        throw std::runtime_error("No cached input found. Must call forward() before backward()");
+
+    if (input_cache.empty())
+    {
+        throw std::logic_error("DenseLayer::backward: Forward pass not called or cache cleared");
     }
-    
-    // Compute gradient w.r.t. input: grad_input = W^T * grad_output
-    std::vector<double> grad_input(this->input_size, 0.0);
-    for (size_t i = 0; i < this->input_size; ++i) {
-        double sum = 0.0;
-        for (size_t j = 0; j < this->output_size; ++j) {
-            sum += this->weights[j][i] * grad_output[j];
+
+    // Compute gradient w.r.t. input: dL/dx = W^T * dL/dy
+    std::vector<double> grad_input(input_size, 0.0);
+    for (size_t j = 0; j < input_size; ++j)
+    {
+        for (size_t i = 0; i < output_size; ++i)
+        {
+            grad_input[j] += weights[i][j] * grad_output[i];
         }
-        grad_input[i] = sum;
     }
-    
-    // Accumulate gradients w.r.t. weights: grad_W = grad_output * input^T
-    for (size_t i = 0; i < this->output_size; ++i) {
-        for (size_t j = 0; j < this->input_size; ++j) {
-            this->grad_weights[i][j] += grad_output[i] * this->input_cache[j];
+
+    // Accumulate gradients w.r.t. weights and biases
+    for (size_t i = 0; i < output_size; ++i)
+    {
+        // dL/dW_i = dL/dy_i * x^T
+        for (size_t j = 0; j < input_size; ++j)
+        {
+            grad_weights[i][j] += grad_output[i] * input_cache[j];
         }
-        // Accumulate gradients w.r.t. biases: grad_b = grad_output
-        this->grad_biases[i] += grad_output[i];
+        // dL/db_i = dL/dy_i
+        grad_biases[i] += grad_output[i];
     }
-    
+
     return grad_input;
 }
 
-void DenseLayer::applyGradients(double learning_rate, size_t batch_size) {
-    if (batch_size == 0) {
-        throw std::invalid_argument("Batch size must be positive");
-    }
-    
-    // Apply gradients with learning rate and batch averaging
-    double lr_normalized = learning_rate / static_cast<double>(batch_size);
-    
-    for (size_t i = 0; i < this->output_size; ++i) {
-        for (size_t j = 0; j < this->input_size; ++j) {
-            this->weights[i][j] -= lr_normalized * this->grad_weights[i][j];
-        }
-        this->biases[i] -= lr_normalized * this->grad_biases[i];
-    }
-}
-
-void DenseLayer::clearGradients() {
-    for (auto& row : this->grad_weights) {
+void DenseLayer::clearGradients()
+{
+    for (auto &row : grad_weights)
+    {
         std::fill(row.begin(), row.end(), 0.0);
     }
-    std::fill(this->grad_biases.begin(), this->grad_biases.end(), 0.0);
+    std::fill(grad_biases.begin(), grad_biases.end(), 0.0);
 }
 
-void DenseLayer::summary() const {
-    size_t total_params = (this->input_size * this->output_size) + this->output_size;
-    std::cout << "Dense Layer Summary:" << std::endl;
-    std::cout << "  Input size:  " << this->input_size << std::endl;
-    std::cout << "  Output size: " << this->output_size << std::endl;
-    std::cout << "  Parameters:  " << total_params << " (" 
-              << (this->input_size * this->output_size) << " weights + " 
-              << this->output_size << " biases)" << std::endl;
+void DenseLayer::summary() const
+{
+    const size_t total_params = (input_size * output_size) + output_size;
+    std::cout << "Dense Layer: " << input_size << " -> " << output_size
+              << " | Parameters: " << total_params << " ("
+              << input_size * output_size << " weights + "
+              << output_size << " biases)\n";
 }
 
-void DenseLayer::printWeights() const {
-    if (this->weights.empty()) {
+void DenseLayer::printWeights() const
+{
+    if (this->weights.empty())
+    {
         std::cout << "Weights not initialized" << std::endl;
         return;
     }
-    
+
     std::cout << "Weights [" << this->output_size << "x" << this->input_size << "]:" << std::endl;
-    for (size_t i = 0; i < this->output_size; ++i) {
-        std::cout << "  [";
-        for (size_t j = 0; j < this->input_size; ++j) {
+    for (size_t i = 0; i < this->output_size; ++i)
+    {
+        std::cout << " [";
+        for (size_t j = 0; j < this->input_size; ++j)
+        {
             std::cout << std::fixed << std::setprecision(4) << std::setw(8) << this->weights[i][j];
-            if (j < this->input_size - 1) std::cout << ", ";
+            if (j < this->input_size - 1)
+                std::cout << ", ";
         }
         std::cout << "]" << std::endl;
     }
 }
 
-void DenseLayer::printBiases() const {
-    if (this->biases.empty()) {
+void DenseLayer::printBiases() const
+{
+    if (this->biases.empty())
+    {
         std::cout << "Biases not initialized" << std::endl;
         return;
     }
-    
+
     std::cout << "Biases [" << this->output_size << "]:" << std::endl;
-    std::cout << "  [";
-    for (size_t i = 0; i < this->output_size; ++i) {
+    std::cout << " [";
+    for (size_t i = 0; i < this->output_size; ++i)
+    {
         std::cout << std::fixed << std::setprecision(4) << std::setw(8) << this->biases[i];
-        if (i < this->output_size - 1) std::cout << ", ";
+        if (i < this->output_size - 1)
+            std::cout << ", ";
     }
     std::cout << "]" << std::endl;
 }
 
-size_t DenseLayer::getParameterCount() const {
+size_t DenseLayer::getParameterCount() const
+{
     return (this->input_size * this->output_size) + this->output_size;
 }
 
 // Getters
-const std::vector<std::vector<double>>& DenseLayer::getGradWeights() const { 
-    return this->grad_weights; 
+const std::vector<std::vector<double>> &DenseLayer::getGradWeights() const
+{
+    return this->grad_weights;
 }
 
-const std::vector<double>& DenseLayer::getGradBiases() const { 
-    return this->grad_biases; 
+const std::vector<double> &DenseLayer::getGradBiases() const
+{
+    return this->grad_biases;
 }
 
-const std::vector<std::vector<double>>& DenseLayer::getWeights() const { 
-    return this->weights; 
+const std::vector<std::vector<double>> &DenseLayer::getWeights() const
+{
+    return this->weights;
 }
 
-const std::vector<double>& DenseLayer::getBiases() const { 
-    return this->biases; 
+const std::vector<double> &DenseLayer::getBiases() const
+{
+    return this->biases;
 }
 
-// Setters with validation
-void DenseLayer::setWeights(const std::vector<std::vector<double>>& new_weights) {
-    if (new_weights.size() != this->output_size) {
-        throw std::invalid_argument("Weight matrix row count mismatch");
+// Setters with enhanced validation
+void DenseLayer::setWeights(const std::vector<std::vector<double>> &new_weights)
+{
+    if (new_weights.size() != output_size)
+    {
+        throw std::invalid_argument("DenseLayer::setWeights: Row count mismatch. Expected " +
+                                    std::to_string(output_size) + ", got " +
+                                    std::to_string(new_weights.size()));
     }
-    for (const auto& row : new_weights) {
-        if (row.size() != this->input_size) {
-            throw std::invalid_argument("Weight matrix column count mismatch");
+    for (const auto &row : new_weights)
+    {
+        if (row.size() != input_size)
+        {
+            throw std::invalid_argument("DenseLayer::setWeights: Column count mismatch. Expected " +
+                                        std::to_string(input_size) + ", got " +
+                                        std::to_string(row.size()));
         }
     }
-    this->weights = new_weights;
+    weights = std::move(new_weights);
 }
 
-void DenseLayer::setBiases(const std::vector<double>& new_biases) {
-    if (new_biases.size() != this->output_size) {
-        throw std::invalid_argument("Bias vector size mismatch");
+void DenseLayer::setBiases(const std::vector<double> &new_biases)
+{
+    if (new_biases.size() != output_size)
+    {
+        throw std::invalid_argument("DenseLayer::setBiases: Size mismatch. Expected " +
+                                    std::to_string(output_size) + ", got " +
+                                    std::to_string(new_biases.size()));
     }
-    this->biases = new_biases;
+    biases = std::move(new_biases);
 }

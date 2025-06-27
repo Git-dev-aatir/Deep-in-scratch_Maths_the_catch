@@ -1,9 +1,12 @@
 #pragma once
 
 #include <vector>
-#include <iostream>
+#include <memory>
+#include <stdexcept>
+#include <functional> 
+#include "Data/DataLoader.h"
 #include "../Layers/Layers.h"
-#include "../Optimizers/Optim.h"
+#include "../Optimizers/SGD.h"
 
 // Note : Sequential takes ownership of all layers within it 
 //        and these layer pointers or layer shouldn't be used anywhere else
@@ -12,14 +15,16 @@
 // Note : Current assumption is that only dense layers are trainable by optimizers.
 
 /**
- * @brief Sequential container for stacking layers, similar to PyTorch.
+ * @brief Sequential container for neural network layers.
+ * 
+ * Allows stacking layers in sequence and performing forward/backward passes.
  */
 class Sequential {
 private:
     /**
      * @brief Container to hold pointers to layers in the sequence.
      */
-    std::vector<BaseLayer*> layers;
+    std::vector<std::unique_ptr<BaseLayer>> layers;
 
     /**
      * @brief Flag to track initialization of parameters.
@@ -42,13 +47,12 @@ private:
      * @param rest Remaining Layer pointers to be processed recursively.
      */
     template<typename First, typename... Rest>
-    void addLayers(First first, Rest... rest) {
-        this->layers.push_back(first);
-        this->addLayers(rest...); // Recursive unpacking
+    void addLayers(First&& first, Rest&&... rest) {
+        layers.push_back(std::forward<First>(first));
+        addLayers(std::forward<Rest>(rest)...);
     }
 
 public:
-    
     /**
      * @brief Variadic template constructor to accept any number of Layer pointers.
      * 
@@ -59,9 +63,14 @@ public:
      * @param args Pointers to Layer objects to be added to the model.
      */
     template<typename... Layers>
-    Sequential(Layers... args) {
-        this->addLayers(args...);
+    Sequential(Layers&&... args) {
+        addLayers(std::forward<Layers>(args)...);
     }
+
+    // /**
+    //  * @brief Destructor to release dynamically allocated layers.
+    //  */
+    // ~Sequential();
 
     /**
      * @brief Initializes weights and biases of Dense layers based on their subsequent ActivationLayers.
@@ -83,66 +92,75 @@ public:
                             double sparsity = 0.0, double bias_value = 0.1);
 
     /**
-     * @brief Performs a forward pass through all layers.
-     * 
-     * @param input Input vector of doubles.
-     * @return Output vector after passing through the model.
+     * @brief Perform forward pass through all layers.
+     * @param input Input vector.
+     * @return Output vector after processing through all layers.
      */
     std::vector<double> forward(const std::vector<double>& input) const;
 
     /**
-     * @brief Performs a backward pass through all layers.
-     * 
-     * @param grad_output Gradient of the loss with respect to the model output.
-     * @param learning_rate Learning rate for parameter updates.
-     * @return Gradient of the loss with respect to the model input.
+     * @brief Perform backward pass through all layers.
+     * @param grad_output Gradient from the loss function.
+     * @param lr Learning rate (unused in backward pass).
+     * @return Gradient with respect to the input.
      */
-    std::vector<double> backward(const std::vector<double>& grad_output, 
-                                 double learning_rate = 0.01);
+    std::vector<double> backward(const std::vector<double>& grad_output, double lr);
 
     /**
-     * @brief Performs a training step over a batch of samples with multi-dimensional labels (per-sample loss).
-     * 
-     * The actual training loop is delegated to the optimizer via train_batch().
-     * 
-     * @param X Batch of input samples (2D vector of doubles).
-     * @param Y_true Batch of true labels (2D vector of doubles).
-     * @param loss_func Pointer to the per-sample loss function.
-     * @param loss_derivative Pointer to the per-sample loss derivative function.
-     * @param optimizer Pointer to the optimizer that will perform the training loop.
-     * @return Average loss over the batch.
-     */
-    double train(const std::vector<std::vector<double>>& X,
-                const std::vector<std::vector<double>>& Y_true,
-                double (*loss_func)(const std::vector<double>&, const std::vector<double>&),
-                std::vector<double> (*loss_derivative)(const std::vector<double>&, const std::vector<double>&),
-                Optimizer* optimizer);
-
-    /**
-     * @brief Performs a training step over a batch of samples using batch-aware loss functions.
-     * 
-     * Supports fully vectorized batch loss and derivative computations for efficiency.
-     * 
-     * @param X Batch of input samples (2D vector of doubles).
-     * @param Y_true Batch of true labels (2D vector of doubles).
-     * @param loss_func Pointer to the batch loss function.
-     * @param loss_derivative Pointer to the batch loss derivative function.
-     * @param optimizer Pointer to the optimizer that will perform the training loop.
-     * @return Average loss over the batch.
-     */
-    double train(const std::vector<std::vector<double>>& X,
-                 const std::vector<std::vector<double>>& Y_true,
-                 double (*loss_func)(const std::vector<std::vector<double>>&, const std::vector<std::vector<double>>&),
-                 std::vector<std::vector<double>> (*loss_derivative)(const std::vector<std::vector<double>>&, const std::vector<std::vector<double>>&),
-                 Optimizer* optimizer);
-
-    /**
-     * @brief Prints a summary of the model architecture.
+     * @brief Print summary of all layers.
      */
     void summary() const;
 
     /**
-     * @brief Destructor to release dynamically allocated layers.
+     * @brief Get number of layers.
+     * @return Number of layers in the sequence.
      */
-    ~Sequential();
+    size_t size() const {
+        return layers.size();
+    }
+
+    /**
+     * @brief Fit the model to the data.
+     * @param X_train Training inputs [num_samples][input_dim]
+     * @param y_train Training targets [num_samples][output_dim]
+     * @param optimizer Optimizer object (e.g., SGD)
+     * @param batch_size Size of each mini-batch
+     * @param epochs Number of epochs to train
+     * @param loss_fn Loss function: (y_true, y_pred) -> double
+     * @param grad_fn Loss gradient function: (y_true, y_pred) -> std::vector<double>
+     * @param verbose If true, prints loss after each epoch
+     */
+    int fit(const Dataset& X_train,
+                    const Dataset& y_train,
+                    SGD& optimizer,
+                    size_t batch_size,
+                    std::function<double(const std::vector<double>&, 
+                                         const std::vector<double>&)> loss_fn,
+                    std::function<std::vector<double>(const std::vector<double>&, 
+                                                      const std::vector<double>&)> grad_fn
+    );
+
+    /**
+     * @brief Access layer by index.
+     * @param index Layer index.
+     * @return Pointer to the layer.
+     */
+    BaseLayer* operator[](size_t index) {
+        if (index >= layers.size()) 
+            throw std::out_of_range("Index out of range");
+        return layers[index].get();
+    }
+
+    /**
+     * @brief Get all layers in the sequence.
+     * @return Vector of pointers to the layers.
+     */
+    std::vector<BaseLayer*> getLayers() {
+        std::vector<BaseLayer*> layer_ptrs;
+        for (auto& layer : layers) {
+            layer_ptrs.push_back(layer.get());
+        }
+        return layer_ptrs;
+    }
+
 };

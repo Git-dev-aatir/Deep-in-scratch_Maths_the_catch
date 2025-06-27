@@ -10,11 +10,11 @@ This document describes the design and functionality of the **layer classes** in
 | ------------------------------------- | -------------------------------------------------- |
 | `./include/Layers/BaseLayer.h`        | Abstract base class defining layer interface.      |
 | `./include/Layers/DenseLayer.h`       | Dense (fully connected) layer declaration.         |
-| `./src/Layers/denseLayer.cpp`         | Dense layer method implementations.                |
+| `./src/Layers/DenseLayer.cpp`         | Dense layer method implementations.                |
 | `./include/Layers/Activation_utils.h` | Activation function utilities and enums.           |
 | `./include/Layers/ActivationLayer.h`  | Activation layer declaration.                      |
-| `./src/Layers/activation_utils.cpp`   | Activation functions implementation.               |
-| `./src/Layers/activationLayer.cpp`    | Activation layer method implementations.           |
+| `./src/Layers/Activation_utils.cpp`   | Activation functions implementation.               |
+| `./src/Layers/ActivationLayer.cpp`    | Activation layer method implementations.           |
 | `./include/Layers/Layers.h`           | Header aggregating DenseLayer and ActivationLayer. |
 
 ---
@@ -37,7 +37,7 @@ This document describes the design and functionality of the **layer classes** in
 
 ---
 
-## 📄 DenseLayer.h / denseLayer.cpp
+## 📄 DenseLayer.h / DenseLayer.cpp
 
 ### ⚙️ Class: `DenseLayer` (Fully Connected Layer)
 
@@ -60,7 +60,7 @@ This document describes the design and functionality of the **layer classes** in
   * `initializeWeights(...)` — Uses the **Initialization** utility for multiple weight init methods, including seed and sparsity control.
   * `initializeBiases(...)` — Bias initialization similar to weights.
   * `forward(const vector<double>& input)` — Computes output = weights \* input + biases, caches input.
-  * `backward(const vector<double>& grad_output, double learning_rate)` — Computes gradients w\.r.t inputs, weights, and biases; stores gradients.
+  * `backward(const vector<double>& grad_output, double learning_rate)` — Computes gradients w.r.t inputs, weights, and biases; stores gradients.
   * `clearGradients()` — Resets gradients to zero.
   * `summary()` — Prints layer dimensions.
 
@@ -68,14 +68,13 @@ This document describes the design and functionality of the **layer classes** in
 
   * Accessors for weights, biases, and their gradients.
 
-* **File References:**
-
-  * Declaration: `./include/Layers/DenseLayer.h`
-  * Implementation: `./src/Layers/denseLayer.cpp`
+* **Design Change:**  
+  **Parameter updates (e.g., `applyGradients`) are now handled by separate optimizer classes, not the layer itself.**  
+  The layer only accumulates gradients; the optimizer is responsible for updating parameters using those gradients.
 
 ---
 
-## 📄 Activation\_utils.h / activation\_utils.cpp
+## 📄 Activation_utils.h / Activation_utils.cpp
 
 ### 🔢 Enum & Functions: `ActivationType` and Activation Utilities
 
@@ -89,14 +88,9 @@ This document describes the design and functionality of the **layer classes** in
   * `activationDerivative(...)` — Element-wise derivative for backpropagation. Throws error for softmax derivative (to be handled combined with cross-entropy).
   * `activationTypeToString(...)` — Converts enum to readable string.
 
-* **File References:**
-
-  * Declaration: `./include/Layers/Activation_utils.h`
-  * Implementation: `./src/Layers/activation_utils.cpp`
-
 ---
 
-## 📄 ActivationLayer.h / activationLayer.cpp
+## 📄 ActivationLayer.h / ActivationLayer.cpp
 
 ### ⚡ Class: `ActivationLayer`
 
@@ -122,18 +116,11 @@ This document describes the design and functionality of the **layer classes** in
   * Supports parameters for LeakyReLU (`alpha`) and SELU (`alpha`, `lambda`).
   * Softmax derivative not computed here; handled externally with loss.
 
-* **File References:**
-
-  * Declaration: `./include/Layers/ActivationLayer.h`
-  * Implementation: `./src/Layers/activationLayer.cpp`
-
 ---
 
 ## 📄 Layers.h
 
 * Convenience header that includes `DenseLayer.h` and `ActivationLayer.h`.
-
-* **File Reference:** `./include/Layers/Layers.h`
 
 ---
 
@@ -146,16 +133,33 @@ This document describes the design and functionality of the **layer classes** in
 | Needed flexible initialization with various schemes (Xavier, He, Orthogonal) and sparsity control.      | Integrated `initializeParameters()` utility supporting multiple init methods, sparsity, and manual seed control.               |
 | Orthogonal initialization requires square matrices but user may pass non-square dimensions.             | Added runtime check and error message to reject non-square matrices for orthogonal init.                                       |
 | Lack of consistent interface caused maintenance and polymorphism issues.                                | Created abstract `BaseLayer` class with pure virtual methods to enforce consistent interface across all layers.                |
+| Parameter update logic (`applyGradients`) was tightly coupled to layers.                                | **Moved all parameter updates to separate optimizer classes. Layers now only store parameters and gradients.**                 |
 
 ---
 
 ## 🎓 Key Learnings
 
-* Caching inputs during forward passes is essential for correct backpropagation, especially in layers with parameters.
-* Handling Softmax derivatives separately avoids errors and numerical instability in training.
-* Modular weight initialization utilities with flexibility for various schemes and reproducibility greatly simplify model setup.
-* Clear error handling (like for orthogonal init) prevents silent bugs and aids debugging.
-* Designing a clean, abstract base class interface enforces consistent APIs and facilitates extensibility and polymorphism.
+* **Separation of Concerns:** Layers now only store and accumulate gradients; optimizers handle all parameter updates, making the codebase more modular and extensible.
+* **Caching inputs during forward passes** is essential for correct backpropagation, especially in layers with parameters.
+* **Handling Softmax derivatives separately** avoids errors and numerical instability in training.
+* **Modular weight initialization utilities** with flexibility for various schemes and reproducibility greatly simplify model setup.
+* **Clear error handling** (like for orthogonal init) prevents silent bugs and aids debugging.
+* **Designing a clean, abstract base class interface** enforces consistent APIs and facilitates extensibility and polymorphism.
+* **Batch and hardware support** are natural next steps for efficiency and scalability.
+
+---
+
+## 🚀 Future Improvements
+
+- **Batch Processing:** Add batch versions of forward and backward methods for efficiency.
+- **Advanced Layer Types:** Implement convolutional, recurrent, dropout, and normalization layers.
+- **Regularization:** Add L1/L2 regularization hooks and support in backward pass.
+- **Serialization:** Add save/load methods for weights and biases.
+- **Hardware Acceleration:** Integrate SIMD, threading, or GPU support for matrix operations.
+- **Layer Parameter Registration:** Expose generic parameter/gradient accessors for optimizers.
+- **Unit Testing:** Expand tests for all edge cases, especially for batch and optimizer integration.
+- **ONNX/Interoperability:** Support export to ONNX or other formats for deployment.
+- **Visualization:** Add utilities for layer-wise output and gradient inspection.
 
 ---
 
@@ -167,4 +171,7 @@ This module provides the **foundation for building feed-forward neural networks*
 * **DenseLayer**: Fully connected layer with weight & bias management and gradient tracking.
 * **ActivationLayer**: Supports common activation functions critical for non-linearity in neural nets.
 
-Together, these classes enable creating trainable networks capable of learning via backpropagation and gradient descent.
+**Parameter updates are now handled by dedicated optimizer classes, not by the layers themselves.**  
+This separation of concerns enables more flexible, maintainable, and extensible neural network architectures, and aligns with best practices in modern deep learning frameworks.
+
+---

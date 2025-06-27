@@ -1,199 +1,116 @@
-#include "../../include/Models/Sequential.h"
-#include "../../include/Preprocessing/Dataset_utils.h"
+#include "Models/Sequential.h"
 #include <iostream>
+#include <random>
+#include <functional> 
+#include <numeric>
+#include <algorithm>
+// #include <chrono>
 
-void Sequential::initializeParameters(unsigned int seed, 
-                        double a, double b, 
-                        double sparsity, double bias_value) 
-{
+void Sequential::initializeParameters(unsigned int seed, double a, double b, double sparsity, double bias_value) {
     for (size_t i = 0; i < this->layers.size(); ++i) {
-        DenseLayer* dense_layer = dynamic_cast<DenseLayer*>(this->layers[i]);
-        InitMethod method;
+        auto* dense_layer = dynamic_cast<DenseLayer*>(this->layers[i].get());
         if (dense_layer) {
-            method = InitMethod::XAVIER_NORMAL;
-
+            InitMethod method = InitMethod::XAVIER_UNIFORM; // default
             if (i + 1 < this->layers.size()) {
-                ActivationLayer* act_layer = dynamic_cast<ActivationLayer*>(layers[i + 1]);
+                auto* act_layer = dynamic_cast<ActivationLayer*>(this->layers[i + 1].get());
                 if (act_layer) {
-                    ActivationType act_type = act_layer->getActivationType();
-                    switch (act_type) {
+                    switch (act_layer->getActivationType()) {
                         case ActivationType::RELU:
                         case ActivationType::LEAKY_RELU:
-                            method = InitMethod::HE_NORMAL;
+                            method = InitMethod::HE_UNIFORM;
                             break;
                         case ActivationType::SIGMOID:
                         case ActivationType::TANH:
-                            method = InitMethod::XAVIER_NORMAL;
+                            method = InitMethod::XAVIER_UNIFORM;
                             break;
                         case ActivationType::SELU:
-                            method = InitMethod::LECUN_NORMAL;
+                            method = InitMethod::LECUN_UNIFORM;
                             break;
                         default:
-                            method = InitMethod::XAVIER_NORMAL;
+                            method = InitMethod::XAVIER_UNIFORM;
+                            break;
                     }
                 }
             }
-            else {
-                method = InitMethod::XAVIER_UNIFORM;
-            }
-
             dense_layer->initializeWeights(method, seed, a, b, sparsity, bias_value);
             dense_layer->initializeBiases(InitMethod::BIAS, seed, a, b, sparsity, bias_value);
         }
     }
-    this->is_initialized = true; // mark as initialized
 }
 
 std::vector<double> Sequential::forward(const std::vector<double>& input) const {
-    if (!is_initialized) {
-        throw std::runtime_error("Error: Model parameters not initialized. Call initializeParameters() before forward().");
-    }
-
     std::vector<double> output = input;
-    for (BaseLayer* layer : this->layers) {
+    for (auto& layer : this->layers) {
         output = layer->forward(output);
     }
     return output;
 }
 
-std::vector<double> Sequential::backward(const std::vector<double>& grad_output, 
-                                         double learning_rate) {
+std::vector<double> Sequential::backward(const std::vector<double>& grad_output, double lr) {
+    // Add debug print
+    // std::cout << "Backprop grad: ";
+    // for (auto g : grad_output) std::cout << g << " ";
+    // std::cout << "\n";
+    
     std::vector<double> grad = grad_output;
     for (auto it = this->layers.rbegin(); it != this->layers.rend(); ++it) {
-        grad = (*it)->backward(grad, learning_rate);
+        grad = (*it)->backward(grad);
     }
     return grad;
 }
 
-double Sequential::train(const std::vector<std::vector<double>>& X,
-             const std::vector<std::vector<double>>& Y_true,
-             double (*loss_func)(const std::vector<double>&, const std::vector<double>&),
-             std::vector<double> (*loss_derivative)(const std::vector<double>&, const std::vector<double>&),
-             Optimizer* optimizer)
-{
-    if (!is_initialized) {
-        throw std::runtime_error("Error: Model parameters not initialized. Call initializeParameters() before training.");
-    }
-
-    size_t batch_size = X.size();
-    std::vector<DenseLayer*> dense_layers;
-
-    for (BaseLayer* layer : this->layers) {
-        if (auto dense = dynamic_cast<DenseLayer*>(layer)) {
-            dense_layers.push_back(dense);
-        }
-    }
-
-    optimizer->before_epoch(dense_layers);
-    optimizer->clear_gradients(dense_layers);
-
-    double total_loss = 0.0;
-    for (size_t i = 0; i < batch_size; ++i) {
-        std::vector<double> output = this->forward(X[i]);
-        const std::vector<double>& y_true_vec = Y_true[i];
-        total_loss += loss_func(y_true_vec, output);
-
-        std::vector<double> grad_output = loss_derivative(y_true_vec, output);
-        this->backward(grad_output);
-        optimizer->step_per_sample(dense_layers);
-
-    }
-
-    optimizer->step_after_batch(dense_layers);
-    // optimizer->clear_gradients(dense_layers);
-
-    return total_loss / batch_size;
-}
-
-double Sequential::train(const std::vector<std::vector<double>>& X,
-             const std::vector<std::vector<double>>& Y_true,
-             double (*loss_func)(const std::vector<std::vector<double>>&, const std::vector<std::vector<double>>&),
-             std::vector<std::vector<double>> (*loss_derivative)(const std::vector<std::vector<double>>&, const std::vector<std::vector<double>>&),
-             Optimizer* optimizer)
-{
-    if (!is_initialized) {
-        throw std::runtime_error("Error: Model parameters not initialized. Call initializeParameters() before training.");
-    }
-
-    size_t batch_size = X.size();
-    std::vector<DenseLayer*> dense_layers;
-
-    for (BaseLayer* layer : this->layers) {
-        if (auto dense = dynamic_cast<DenseLayer*>(layer)) {
-            dense_layers.push_back(dense);
-        }
-    }
-
-    optimizer->before_epoch(dense_layers);
-    optimizer->clear_gradients(dense_layers);
-
-    // // Forward pass for entire batch
-    // std::vector<std::vector<double>> outputs(batch_size);
-    // for (size_t i = 0; i < batch_size; ++i) {
-    //     outputs[i] = this->forward(X[i]);
-    // }
-
-    double total_loss = 0.0;
-    // std::vector<std::vector<double>> grad_outputs = loss_derivative(Y_true, outputs);
-
-    for (size_t i = 0; i < batch_size; ++i) {
-
-        // Forward pass for single sample
-        std::vector<double> output = this->forward(X[i]);
-
-        // Calculate loss for this sample
-        std::vector<std::vector<double>> single_output = {output};
-        std::vector<std::vector<double>> single_target = {Y_true[i]};
-        
-        double sample_loss = loss_func(single_target, single_output);
-        total_loss += sample_loss;
-        
-        // Get gradient for this sample
-        std::vector<std::vector<double>> grad_outputs = loss_derivative(single_target, single_output);
-        
-        // Backward pass for single sample
-
-        this->backward(grad_outputs[0]);
-        optimizer->step_per_sample(dense_layers);
-        // std::cout << "\nWeights after iteration '" << i << "' :\n";
-        // const auto& weights = dense_layers[dense_layers.size()-1]->getWeights();
-        // head(weights, weights.size());
-        // std::cout << std::endl;
-    }
-
-    // Average the accumulated gradients
-    // for (auto* layer : dense_layers) {
-    //     auto& grad_weights = const_cast<std::vector<std::vector<double>>&>(layer->getGradWeights());
-    //     auto& grad_biases = const_cast<std::vector<double>&>(layer->getGradBiases());
-        
-    //     for (auto& row : grad_weights) {
-    //         for (auto& val : row) {
-    //             val /= batch_size;
-    //         }
-    //     }
-    //     for (auto& val : grad_biases) {
-    //         val /= batch_size;
-    //     }
-    // }
-
-    // Update weights once per batch
-    // optimizer->step(dense_layers);
-    
-    optimizer->step_after_batch(dense_layers);
-    // optimizer->clear_gradients(dense_layers);
-
-    return total_loss / batch_size;
-}
-
 void Sequential::summary() const {
     std::cout << "Sequential Model Summary:\n";
-    for (const BaseLayer* layer : this->layers) {
-        layer->summary();
+    std::cout << "========================\n";
+    for (size_t i = 0; i < layers.size(); ++i) {
+        std::cout << "Layer " << i << ": ";
+        this->layers[i]->summary();
     }
+    std::cout << "Total Layers: " << this->layers.size() << "\n";
+    std::cout << "========================\n";
 }
 
-Sequential::~Sequential() {
-    for (BaseLayer* layer : this->layers) {
-        delete layer;
+int Sequential::fit(const Dataset& X_train,
+                    const Dataset& y_train,
+                    SGD& optimizer,
+                    size_t batch_size,
+                    std::function<double(const std::vector<double>&, 
+                                         const std::vector<double>&)> loss_fn,
+                    std::function<std::vector<double>(const std::vector<double>&, 
+                                                      const std::vector<double>&)> grad_fn
+) {
+    DataLoader loader(X_train, batch_size, true);
+    double epoch_loss = 0.0;
+    
+    // Use explicit iterator syntax to access getIndices()
+    for (auto it = loader.begin(); it != loader.end(); ++it) {
+        Dataset batch = *it;
+        const auto& batch_data = batch.getData();
+        
+        // Get indices from the ITERATOR
+        auto batch_indices = it.getCurrentIndices();
+        size_t current_batch_size = batch_data.size();
+        
+        for (size_t i = 0; i < current_batch_size; ++i) {
+            const auto& x = batch_data[i];
+            const auto& y = y_train[batch_indices[i]];  // Correct global index
+            
+            auto y_pred = forward(x);
+            epoch_loss += loss_fn(y, y_pred);
+            auto grad = grad_fn(y, y_pred);
+            backward(grad, 0.01);
+        }
+        
+        optimizer.step(getLayers(), current_batch_size);
     }
+    return epoch_loss;
+
+    // auto end_time = std::chrono::high_resolution_clock::now();
+    // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    
+    // if (verbose) {
+    //     std::cout << "Epoch " << (epoch + 1) << "/" << epochs
+    //                 << " | Avg Loss: " << (epoch_loss / X_train.rows())
+    //                 << " | Time: " << duration.count() << "ms\n";
+    // }
 }

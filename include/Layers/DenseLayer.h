@@ -96,7 +96,7 @@ public:
      * @param lr The learning rate used for gradient descent (default: 0.01).
      * @return The gradient of the loss with respect to the input (size: input_size).
      */
-    std::vector<double> backward(const std::vector<double>& grad_output, double lr) override;
+    std::vector<double> backward(const std::vector<double>& grad_output) override;
 
     /**
      * @brief Prints a summary of the layer's parameters.
@@ -105,17 +105,6 @@ public:
      * and bias vector, as well as any other relevant information about the layer.
      */
     void summary() const override;
-
-    /**
-     * @brief Applies the gradients to update the weights and biases using gradient descent.
-     *
-     * This function applies the gradients computed during backpropagation to update the weights and biases
-     * using the specified learning rate and batch size.
-     *
-     * @param learning_rate The learning rate used for weight and bias updates.
-     * @param batch_size The batch size used to compute the gradients.
-     */
-    void applyGradients(double learning_rate, size_t batch_size);
 
     /**
      * @brief Clears the gradients stored in the layer.

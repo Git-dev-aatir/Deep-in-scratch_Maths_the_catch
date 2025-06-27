@@ -1,0 +1,46 @@
+# =======================
+#        Makefile
+#   Unix / Git Bash / MSYS2 Compatible
+# =======================
+
+CXX := g++
+CXXFLAGS := -std=c++17 -Wall -Wextra -Iinclude -O2 -MMD -MP
+
+SRC_DIR := src
+BUILD_DIR := build
+
+# Find all .cpp files recursively (for GNU Make)
+SRC_FILES := $(shell find $(SRC_DIR) -name '*.cpp')
+
+# Generate corresponding .o files in build/
+# Full object files (your whole library)
+OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(shell find $(SRC_DIR) -name '*.cpp'))
+
+# Default target
+all: $(OBJ_FILES)
+	@echo "✅ Library built successfully. No main executable produced."
+
+# Rule to build each object file
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Auto-include dependency files for header change detection
+-include $(OBJ_FILES:.o=.d)
+
+# Run any example file (compile & run)
+# Usage: make run-example FILE=Examples/your_example.cpp
+run-example:
+ifndef FILE
+	$(error FILE variable is not set. Usage: make run-example FILE=Examples/your_example.cpp)
+endif
+	@mkdir -p $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) "$(FILE)" $(OBJ_FILES) -o $(BUILD_DIR)/example.exe
+	@echo "🚀 Running example..."
+	@./$(BUILD_DIR)/example.exe
+
+# Clean build artifacts
+clean:
+	rm -rf $(BUILD_DIR)
+
+.PHONY: all run-example clean

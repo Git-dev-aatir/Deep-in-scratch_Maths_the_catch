@@ -1,54 +1,70 @@
 #include "../../include/Layers/ActivationLayer.h"
+#include <iostream>
+#include <stdexcept>
 
 ActivationLayer::ActivationLayer(ActivationType act_type, double alpha, double lambda) 
     : activation_type(act_type), alpha(alpha), lambda(lambda) {
     
-    // Set proper SELU parameters if SELU is selected and defaults are being used
+    // Apply standard SELU parameters if using defaults
     if (act_type == ActivationType::SELU && alpha == 0.01) {
         this->alpha = 1.67326;  // Standard SELU alpha
     }
 }
 
 std::vector<double> ActivationLayer::forward(const std::vector<double>& input) {
-    this->input_cache = input;
-    return applyActivation(input, this->activation_type, this->alpha, this->lambda);
-}
-
-std::vector<double> ActivationLayer::backward(const std::vector<double>& grad_output, 
-                                              double lr) {
-    // Special handling for softmax (usually used with cross-entropy)
-    if (this->activation_type == ActivationType::SOFTMAX) {
-        // For softmax with cross-entropy, the loss function typically computes
-        // the gradient directly. Return the incoming gradient as-is.
-        return grad_output;
+    if (input.empty()) {
+        throw std::invalid_argument("ActivationLayer: Input cannot be empty");
     }
     
-    std::vector<double> grad_input = activationDerivative( this->input_cache, 
-                                                           this->activation_type, 
-                                                           this->alpha, 
-                                                           this->lambda );
+    // Cache input for backward pass
+    input_cache = input;
     
-    // Element-wise multiplication: chain rule application
-    for (size_t i = 0; i < grad_input.size(); ++i) {
-        grad_input[i] *= grad_output[i];
+    // Apply activation function
+    return applyActivation(input, activation_type, alpha, lambda);
+}
+
+std::vector<double> ActivationLayer::backward(const std::vector<double>& grad_output) {
+    if (grad_output.empty()) {
+        throw std::invalid_argument("ActivationLayer: Gradient output cannot be empty");
+    }
+    if (input_cache.size() != grad_output.size()) {
+        throw std::logic_error("ActivationLayer: Input cache and gradient size mismatch");
+    }
+    
+    // Handle softmax special case (combined with CE loss)
+    if (activation_type == ActivationType::SOFTMAX) {
+        return grad_output;  // Loss function handles derivative
+    }
+    
+    // Compute activation derivative
+    auto deriv = activationDerivative(input_cache, activation_type, alpha, lambda);
+    
+    // Element-wise gradient multiplication (chain rule)
+    std::vector<double> grad_input(grad_output.size());
+    for (size_t i = 0; i < grad_output.size(); ++i) {
+        grad_input[i] = grad_output[i] * deriv[i];
     }
     
     return grad_input;
 }
 
 void ActivationLayer::summary() const {
-    std::cout << "Activation Layer: " << activationTypeToString(this->activation_type);
+    std::cout << "Activation Layer: " << activationTypeToString(activation_type);
     
-    // Display parameters for parameterized activations
-    if (this->activation_type == ActivationType::LEAKY_RELU) {
-        std::cout << " (alpha=" << this->alpha << ")";
-    } else if (this->activation_type == ActivationType::SELU) {
-        std::cout << " (alpha=" << this->alpha << ", lambda=" << this->lambda << ")";
+    // Display parameters for relevant activation types
+    switch(activation_type) {
+        case ActivationType::LEAKY_RELU:
+            std::cout << " (alpha=" << alpha << ")";
+            break;
+        case ActivationType::SELU:
+            std::cout << " (alpha=" << alpha << ", lambda=" << lambda << ")";
+            break;
+        default: 
+            break;
     }
-    
-    std::cout << std::endl;
+    std::cout << " | Input size: " << input_cache.size() << "\n";
 }
 
 ActivationType ActivationLayer::getActivationType() const {
-    return this->activation_type;
+    return activation_type;
 }
