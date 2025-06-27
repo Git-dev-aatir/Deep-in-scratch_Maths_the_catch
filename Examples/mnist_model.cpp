@@ -51,7 +51,7 @@ int main() {
     y_test.toOneHot();
     
     // Build model
-    size_t hidden_unit1 = 512, hidden_unit2 = 256, hidden_unit3 = 128;  // Increased capacity
+    size_t hidden_unit1 = 10, hidden_unit2 = 10, hidden_unit3 = 10;  // Increased capacity
     Sequential model(
         std::make_unique<DenseLayer>(X_train.cols(), hidden_unit1),
         std::make_unique<ActivationLayer>(ActivationType::SELU),
@@ -67,7 +67,7 @@ int main() {
     size_t epochs = 100;
     
     // Create optimizer
-    const double base_lr = 0.0003;
+    const double base_lr = 0.00015;
     const size_t base_batch_size = 32;
     const size_t batches_per_epoch = ceil(static_cast<double>(X_train.rows()) / base_batch_size);
     const size_t total_steps = epochs * batches_per_epoch;

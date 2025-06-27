@@ -30,7 +30,6 @@ Thumbs.db
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
-Makefile
 
 # Ignore generated documentation
 /doc/
