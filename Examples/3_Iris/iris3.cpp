@@ -9,7 +9,9 @@
 #include "Layers/Layers.h"
 #include "Metrics/Losses.h"
 #include "Data/Preprocessing.h"
-#include "utils/Activations.h"
+#include "Utils/Activations.h"
+#include "Utils/Scheduler.h"
+#include <chrono>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -41,55 +43,53 @@ int main() {
     y_train.toOneHot();
     y_test.toOneHot();
     
-    // Build model with proper architecture
-    size_t hidden_unit = 4;
+    // Build model
+    size_t hidden_unit = 4;  // Increased capacity
     Sequential model(
         std::make_unique<DenseLayer>(X_train.cols(), hidden_unit),
         std::make_unique<ActivationLayer>(ActivationType::SELU),
         std::make_unique<DenseLayer>(hidden_unit, hidden_unit),
         std::make_unique<ActivationLayer>(ActivationType::SELU),
-        std::make_unique<DenseLayer>(hidden_unit, 3),
-        std::make_unique<ActivationLayer>(ActivationType::SELU),
-        std::make_unique<DenseLayer>(3, y_train.cols())
+        std::make_unique<DenseLayer>(hidden_unit, y_train.cols())
     );
     model.initializeParameters(21);
     model.summary();
+
+    size_t epochs = 100;
     
     // Create optimizer
-    double base_lr = 0.001;
-    size_t base_batch_size = 32;
-    SGD optimizer(base_lr, 0.9);
+    const double base_lr = 0.03;
+    const size_t base_batch_size = 32;
+    const size_t batches_per_epoch = ceil(static_cast<double>(X_train.rows()) / base_batch_size);
+    const size_t total_steps = epochs * batches_per_epoch;
+    auto scheduler = Schedulers::cosine(total_steps);
+    SGD optimizer(
+        base_lr,      // learning_rate
+        0.9,          // momentum
+        scheduler   // LR scheduler
+    );
+
     
     DataLoader loader(X_train, base_batch_size, true);
-    size_t epochs = 101;
+
+    auto start = chrono::high_resolution_clock::now();
     
     for (size_t epoch = 0; epoch < epochs; ++epoch) {
-        double epoch_loss = 0.0;
+
+        model.clearGradients();
         
-        // Cosine learning rate decay
-        double lr = base_lr * 0.5 * (1 + cos(M_PI * epoch / epochs));
-        optimizer.setLearningRate(lr);
-        
-        // Training
-        for (auto it = loader.begin(); it != loader.end(); ++it) {
-            Dataset batch = *it;  // Get batch data
-            const auto& batch_data = batch.getData();
-            
-            // Get indices from the ITERATOR (not DataLoader)
-            auto batch_indices = it.getCurrentIndices();
-            size_t current_batch_size = batch_data.size();
-            
-            for (size_t i = 0; i < current_batch_size; ++i) {
-                const auto& x = batch_data[i];
-                const auto& y_true = y_train[batch_indices[i]];
-                
-                auto y_pred = model.forward(x);
-                epoch_loss += Losses::cross_entropy_loss(y_true, y_pred, true);
-                auto grad = Losses::cross_entropy_derivative(y_true, y_pred, true);
-                model.backward(grad, lr);
-            }
-            optimizer.step(model.getLayers(), current_batch_size);
+        double epoch_loss = model.train(
+            X_train, 
+            y_train,
+            optimizer,
+            32,
+            [](const auto& y_true, const auto& y_pred) {
+                return Losses::cross_entropy_loss(y_true, y_pred, true);
+            },
+            [](const auto& y_true, const auto& y_pred) {
+                return Losses::cross_entropy_derivative(y_true, y_pred, true);
         }
+    );
         
         // Test evaluation
         size_t correct = 0;
@@ -102,15 +102,18 @@ int main() {
         }
         double accuracy = static_cast<double>(correct) / X_test.rows() * 100;
         
-        // Print every epoch
-        if ((epoch) % (epochs/10) == 0) {
-        std::cout << "Epoch " << (epoch + 1) << "/" << epochs
-                  << "\t | LR: " << lr
-                  << "\t | Loss: " << epoch_loss / X_train.rows()
-                  << "\t | Acc: " << accuracy << "%\n";
+        // Print every 10 epochs
+        if (epoch % 10 == 0 || epoch == epochs-1 || epoch < 10) {
+            std::cout << "Epoch " << (epoch + 1) << "/" << epochs
+                      << " | LR: " << optimizer.getLearningRate()
+                      << " | Loss: " << epoch_loss / X_train.rows()
+                      << " | Acc: " << accuracy << "%\n";
         }
     }
+
+    auto end = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::microseconds>(end-start);
     
-    std::cout << "Training completed!\n";
+    std::cout << "Training completed at " << duration.count() << " \n";
     return 0;
 }

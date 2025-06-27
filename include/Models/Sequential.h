@@ -104,7 +104,7 @@ public:
      * @param lr Learning rate (unused in backward pass).
      * @return Gradient with respect to the input.
      */
-    std::vector<double> backward(const std::vector<double>& grad_output, double lr);
+    std::vector<double> backward(const std::vector<double>& grad_output);
 
     /**
      * @brief Print summary of all layers.
@@ -120,26 +120,26 @@ public:
     }
 
     /**
-     * @brief Fit the model to the data.
-     * @param X_train Training inputs [num_samples][input_dim]
-     * @param y_train Training targets [num_samples][output_dim]
-     * @param optimizer Optimizer object (e.g., SGD)
-     * @param batch_size Size of each mini-batch
-     * @param epochs Number of epochs to train
-     * @param loss_fn Loss function: (y_true, y_pred) -> double
-     * @param grad_fn Loss gradient function: (y_true, y_pred) -> std::vector<double>
-     * @param verbose If true, prints loss after each epoch
+     * @brief Performs one training pass over the entire dataset.
+     * @param X_train Input features dataset.
+     * @param y_train Target labels dataset.
+     * @param optimizer Optimizer to use for weight updates.
+     * @param batch_size Size of each training batch.
+     * @param loss_fn Loss function (y_true, y_pred) -> double.
+     * @param grad_fn Gradient function (y_true, y_pred) -> vector<double>.
+     * @return Total loss over the training set.
      */
-    int fit(const Dataset& X_train,
-                    const Dataset& y_train,
-                    SGD& optimizer,
-                    size_t batch_size,
-                    std::function<double(const std::vector<double>&, 
-                                         const std::vector<double>&)> loss_fn,
-                    std::function<std::vector<double>(const std::vector<double>&, 
-                                                      const std::vector<double>&)> grad_fn
-    );
+    double train(const Dataset& X_train,
+                 const Dataset& y_train,
+                 BaseOptim& optimizer,
+                 size_t batch_size,
+                 std::function<double(const std::vector<double>&, 
+                                      const std::vector<double>&)> loss_fn,
+                 std::function<std::vector<double>(const std::vector<double>&, 
+                                                   const std::vector<double>&)> grad_fn);
 
+    void clearGradients();
+        
     /**
      * @brief Access layer by index.
      * @param index Layer index.

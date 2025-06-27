@@ -3,14 +3,36 @@
 #include <stdexcept>
 #include <iostream>
 
-SGD::SGD(double lr, double momentum) 
-    : learning_rate(lr), momentum(momentum) {}
+SGD::SGD(double lr, double momentum, std::function<double(double, size_t)> scheduler) 
+    : learning_rate(lr), initial_lr(lr), momentum(momentum), lr_scheduler(scheduler) {}
+
+void SGD::afterStep() {
+    step_count++;
+    if (lr_scheduler) {
+        learning_rate = lr_scheduler(initial_lr, step_count);
+    }
+}
+
+
+void SGD::setLRScheduler(std::function<double(double, size_t)> scheduler) {
+    lr_scheduler = scheduler;
+}
+
+void SGD::setLearningRate(double lr) {
+    learning_rate = lr;
+    // Reset initial LR if needed
+    if (!lr_scheduler) initial_lr = lr;
+}
+
+void SGD::decayLearningRate(double decay_factor) {
+    learning_rate *= decay_factor;
+    if (!lr_scheduler) initial_lr = learning_rate;
+}
 
 void SGD::step(std::vector<BaseLayer*> layers, size_t batch_size) {
     if (batch_size == 0) {
         throw std::invalid_argument("Batch size must be positive");
     }
-    
     for (BaseLayer* layer : layers) {
         updateLayer(layer, batch_size);
     }
@@ -41,7 +63,7 @@ void SGD::updateLayer(BaseLayer* layer, size_t batch_size) {
         }
     }
 
-    const double lr = this->learning_rate ;
+    const double lr = this->learning_rate / batch_size;
     
     // Create updated parameters
     auto new_weights = weights;

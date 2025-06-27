@@ -1,9 +1,6 @@
 #include "Models/Sequential.h"
 #include <iostream>
-#include <random>
-#include <functional> 
-#include <numeric>
-#include <algorithm>
+#include <stdexcept>
 // #include <chrono>
 
 void Sequential::initializeParameters(unsigned int seed, double a, double b, double sparsity, double bias_value) {
@@ -46,7 +43,7 @@ std::vector<double> Sequential::forward(const std::vector<double>& input) const 
     return output;
 }
 
-std::vector<double> Sequential::backward(const std::vector<double>& grad_output, double lr) {
+std::vector<double> Sequential::backward(const std::vector<double>& grad_output) {
     // Add debug print
     // std::cout << "Backprop grad: ";
     // for (auto g : grad_output) std::cout << g << " ";
@@ -70,47 +67,54 @@ void Sequential::summary() const {
     std::cout << "========================\n";
 }
 
-int Sequential::fit(const Dataset& X_train,
-                    const Dataset& y_train,
-                    SGD& optimizer,
-                    size_t batch_size,
-                    std::function<double(const std::vector<double>&, 
-                                         const std::vector<double>&)> loss_fn,
-                    std::function<std::vector<double>(const std::vector<double>&, 
-                                                      const std::vector<double>&)> grad_fn
-) {
+double Sequential::train(const Dataset& X_train,
+                         const Dataset& y_train,
+                         BaseOptim& optimizer,
+                         size_t batch_size,
+                         std::function<double(const std::vector<double>&, 
+                                              const std::vector<double>&)> loss_fn,
+                         std::function<std::vector<double>(const std::vector<double>&, 
+                                                           const std::vector<double>&)> grad_fn)
+{
     DataLoader loader(X_train, batch_size, true);
-    double epoch_loss = 0.0;
+    double total_loss = 0.0;
     
-    // Use explicit iterator syntax to access getIndices()
     for (auto it = loader.begin(); it != loader.end(); ++it) {
         Dataset batch = *it;
         const auto& batch_data = batch.getData();
-        
-        // Get indices from the ITERATOR
         auto batch_indices = it.getCurrentIndices();
         size_t current_batch_size = batch_data.size();
         
+        // Process batch
         for (size_t i = 0; i < current_batch_size; ++i) {
             const auto& x = batch_data[i];
-            const auto& y = y_train[batch_indices[i]];  // Correct global index
+            const auto& y_true = y_train[batch_indices[i]];
             
+            // Forward pass
             auto y_pred = forward(x);
-            epoch_loss += loss_fn(y, y_pred);
-            auto grad = grad_fn(y, y_pred);
-            backward(grad, 0.01);
+            
+            // Compute loss and gradient
+            total_loss += loss_fn(y_true, y_pred);
+            auto grad = grad_fn(y_true, y_pred);
+            
+            backward(grad);
         }
         
+        // Update parameters
         optimizer.step(getLayers(), current_batch_size);
-    }
-    return epoch_loss;
 
-    // auto end_time = std::chrono::high_resolution_clock::now();
-    // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+        // Notify optimizer after step (for schedulers)
+        optimizer.afterStep();
+    }
     
-    // if (verbose) {
-    //     std::cout << "Epoch " << (epoch + 1) << "/" << epochs
-    //                 << " | Avg Loss: " << (epoch_loss / X_train.rows())
-    //                 << " | Time: " << duration.count() << "ms\n";
-    // }
+    return total_loss;
+}
+
+void Sequential::clearGradients() {
+    std::vector<BaseLayer*> all_layers = this->getLayers();
+    for (auto& layer : all_layers) {
+        DenseLayer* dense_layer = dynamic_cast<DenseLayer*>(layer);
+        if (!dense_layer) return;
+        dense_layer->clearGradients();
+    }
 }
