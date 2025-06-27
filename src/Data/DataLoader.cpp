@@ -17,7 +17,7 @@ void DataLoader::reset() {
 DataLoader::Iterator::Iterator(const DataLoader& loader, size_t cursor)
     : loader(loader), cursor(cursor) {}
 
-std::vector<size_t> DataLoader::Iterator::getCurrentIndices() const {
+std::vector<size_t> DataLoader::Iterator::getIndices() const {
     size_t end = std::min(cursor + loader.batch_size, loader.dataset.rows());
     std::vector<size_t> indices;
     for (size_t i = cursor; i < end; i++) {

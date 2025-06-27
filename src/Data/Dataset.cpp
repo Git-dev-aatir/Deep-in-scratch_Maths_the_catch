@@ -94,7 +94,7 @@ void Dataset::loadCSV(const std::string& filename, char delimiter, bool has_head
 }
 
 // Binary Loading
-void Dataset::loadBinary(const std::string& filename) {
+void Dataset::loadBinary(const std::string& filename, bool skip_header) {
     std::ifstream file(filename, std::ios::binary);
     if (!file) throw std::runtime_error("Cannot open file: " + filename);
     
@@ -102,21 +102,34 @@ void Dataset::loadBinary(const std::string& filename) {
     file.read(reinterpret_cast<char*>(&rows), sizeof(size_t));
     file.read(reinterpret_cast<char*>(&cols), sizeof(size_t));
     
-    data.resize(rows, std::vector<double>(cols));
-    for (size_t i = 0; i < rows; ++i) {
+    // Adjust row count if skipping header
+    size_t data_rows = rows;
+    if (skip_header && rows > 0) {
+        // Skip the first row (header)
+        file.seekg(cols * sizeof(double), std::ios::cur);
+        data_rows = rows - 1;
+    }
+    
+    // Resize and read data
+    data.resize(data_rows, std::vector<double>(cols));
+    for (size_t i = 0; i < data_rows; ++i) {
         file.read(reinterpret_cast<char*>(data[i].data()), cols * sizeof(double));
     }
     
-    num_rows = rows;
+    num_rows = data_rows;
     num_cols = cols;
 }
 
 // CSV Saving
-void Dataset::saveCSV(const std::string& filename, char delimiter) const {
+void Dataset::saveCSV(const std::string& filename, char delimiter, bool write_header) const {
     std::ofstream file(filename);
     if (!file) throw std::runtime_error("Cannot create file: " + filename);
-    
+    bool first = true;
     for (const auto& row : data) {
+        if (first && write_header) {
+            first = false;
+            continue;
+        }
         for (size_t i = 0; i < row.size(); ++i) {
             file << row[i];
             if (i < row.size() - 1) file << delimiter;
@@ -126,20 +139,33 @@ void Dataset::saveCSV(const std::string& filename, char delimiter) const {
 }
 
 // Binary Saving
-void Dataset::saveBinary(const std::string& filename) const {
+void Dataset::saveBinary(const std::string& filename, bool write_header) const {
     std::ofstream file(filename, std::ios::binary);
     if (!file) throw std::runtime_error("Cannot create file: " + filename);
     
     size_t rows = data.size();
     size_t cols = rows > 0 ? data[0].size() : 0;
     
+    // Determine start row and adjust row count
+    size_t start_row = 0;
+    if (!write_header && rows > 0) {
+        start_row = 1;  // Skip first row
+        rows -= 1;
+    }
+    
+    // Write dimensions
     file.write(reinterpret_cast<const char*>(&rows), sizeof(size_t));
     file.write(reinterpret_cast<const char*>(&cols), sizeof(size_t));
     
-    for (const auto& row : data) {
-        file.write(reinterpret_cast<const char*>(row.data()), cols * sizeof(double));
+    // Write data rows
+    for (size_t r = start_row; r < data.size(); ++r) {
+        if (data[r].size() != cols) {
+            throw std::runtime_error("Inconsistent column count in row " + std::to_string(r));
+        }
+        file.write(reinterpret_cast<const char*>(data[r].data()), cols * sizeof(double));
     }
 }
+
 
 // Data inspection
 void Dataset::head(size_t n_rows) const {
@@ -157,9 +183,13 @@ std::pair<size_t, size_t> Dataset::shape() const {
     return {num_rows, num_cols};
 }
 
+void Dataset::printShape() const {
+    std::cout << "Shape : [" << num_rows << " x " << num_cols << " ]\n";
+}
+
 void Dataset::describe() const {
     // Print header
-    std::cout << "Column\tCountNull\tCountUnique\tMean\tStd\tMin\t25%\t50%\t75%\tMax\n";
+    std::cout << "\nColumn\t\tCountNull\tCountUnique\tMean\t\tStd\t\tMin\t\t25%\t\t50%\t\t75%\t\tMax\n";
     
     for (size_t col = 0; col < num_cols; ++col) {
         std::vector<double> column_data;
@@ -178,7 +208,7 @@ void Dataset::describe() const {
         
         // Skip calculation if no valid data
         if (column_data.empty()) {
-            std::cout << col << "\t" << count_null << "\t0\tnan\tnan\tnan\tnan\tnan\tnan\tnan\n";
+            std::cout << col << "\t\t" << count_null << "\t\t0\t\tnan\t\tnan\t\tnan\t\tnan\t\tnan\t\tnan\t\tnan\n";
             continue;
         }
         
@@ -209,33 +239,58 @@ void Dataset::describe() const {
         const double q3 = computePercentile(column_data, 75.0);
         
         // Format and print
-        std::cout << col << "\t"
-                  << count_null << "\t"
-                  << count_unique << "\t"
+        std::cout << col << "\t\t"
+                  << count_null << "\t\t"
+                  << count_unique << "\t\t"
                   << std::fixed << std::setprecision(4)
-                  << mean << "\t"
-                  << std_dev << "\t"
-                  << min_val << "\t"
-                  << q1 << "\t"
-                  << median << "\t"
-                  << q3 << "\t"
+                  << mean << "\t\t"
+                  << std_dev << "\t\t"
+                  << min_val << "\t\t"
+                  << q1 << "\t\t"
+                  << median << "\t\t"
+                  << q3 << "\t\t"
                   << max_val << "\n";
     }
+    std::cout << std::endl;
 }
 
 // Data manipulation
-std::pair<Dataset, Dataset> Dataset::splitFeaturesLabels() const {
+std::pair<Dataset, Dataset> Dataset::splitFeaturesLabels(int label_col) const {
+    if (data.empty()) return {Dataset(), Dataset()};
+
+    if (label_col == -1) 
+        label_col = this->num_cols - 1;
+    
+    size_t num_cols = data[0].size();
+    if (label_col >= num_cols || label_col < 0) {
+        throw std::out_of_range("Label column index out of bounds");
+    }
+    
     std::vector<std::vector<double>> features;
     std::vector<std::vector<double>> labels;
     
     for (const auto& row : data) {
-        if (row.size() < 2) continue;
-        features.push_back(std::vector<double>(row.begin(), row.end() - 1));
-        labels.push_back({row.back()});
+        if (row.size() != num_cols) {
+            std::cout << "Skipped an inconsistent row \n";
+            continue;  // Skip inconsistent rows
+        }
+        
+        // Extract features (all columns except label)
+        std::vector<double> feat_row;
+        for (size_t i = 0; i < row.size(); ++i) {
+            if (i != label_col) {
+                feat_row.push_back(row[i]);
+            }
+        }
+        features.push_back(std::move(feat_row));
+        
+        // Extract label
+        labels.push_back({row[label_col]});
     }
     
     return {Dataset(features), Dataset(labels)};
 }
+
 
 Dataset Dataset::selectRows(const std::vector<size_t>& indices) const {
     std::vector<std::vector<double>> selected;

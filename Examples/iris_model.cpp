@@ -10,6 +10,8 @@
 #include "Metrics/Losses.h"
 #include "Data/Preprocessing.h"
 #include "Utils/Activations.h"
+#include "Utils/Scheduler.h"
+#include <chrono>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -20,7 +22,7 @@ using namespace std;
 int main() {
     // Load dataset
     Dataset iris;
-    iris.loadCSV("Examples/3_iris/iris.data", ',', true);
+    iris.loadCSV("Datasets/iris/iris.data", ',', true);
     
     // Inspect dataset
     auto shape = iris.shape();
@@ -52,31 +54,45 @@ int main() {
     );
     model.initializeParameters(21);
     model.summary();
-    
-    // Create optimizer
-    double base_lr = 0.03;
-    size_t base_batch_size = 32;
-    SGD optimizer(base_lr, 0.9);
-    
-    DataLoader loader(X_train, base_batch_size, true);
+
     size_t epochs = 100;
     
+    // Create optimizer
+    const double base_lr = 0.03;
+    const size_t base_batch_size = 32;
+    const size_t batches_per_epoch = ceil(static_cast<double>(X_train.rows()) / base_batch_size);
+    const size_t total_steps = epochs * batches_per_epoch;
+    auto scheduler = Schedulers::cosine(total_steps);
+    SGD optimizer(
+        base_lr,      // learning_rate
+        0.9,          // momentum
+        scheduler   // LR scheduler
+    );
+
+    
+    DataLoader loader(X_train, base_batch_size, true);
+
+    auto start = chrono::high_resolution_clock::now();
+    
     for (size_t epoch = 0; epoch < epochs; ++epoch) {
-        
-        // Cosine learning rate decay
-        double lr = base_lr * 0.5 * (1 + cos(M_PI * epoch / epochs));
-        optimizer.setLearningRate(lr);
+
+        model.clearGradients();
         
         double epoch_loss = model.train(
-        X_train, 
-        y_train,
-        optimizer,
-        32,
-        [](const auto& y_true, const auto& y_pred) {
-            return Losses::cross_entropy_loss(y_true, y_pred, true);
-        },
-        [](const auto& y_true, const auto& y_pred) {
-            return Losses::cross_entropy_derivative(y_true, y_pred, true);
+            X_train, 
+            y_train,
+            optimizer,
+            32,
+            // [](const vector<double>& y_true, const vector<double>& y_pred) {
+            //     return Losses::cross_entropy_loss(y_true, y_pred, true);
+            // },
+            // [](const vector<double>& y_true, const vector<double>& y_pred) {
+            //     return Losses::cross_entropy_derivative(y_true, y_pred, true);
+            [](const vector<vector<double>>& y_true, const vector<vector<double>>& y_pred) {
+                return Losses::cross_entropy_loss_batch(y_true, y_pred, true);
+            },
+            [](const vector<vector<double>>& y_true, const vector<vector<double>>& y_pred) {
+                return Losses::cross_entropy_derivative_batch(y_true, y_pred, true);
         }
     );
         
@@ -94,12 +110,15 @@ int main() {
         // Print every 10 epochs
         if (epoch % 10 == 0 || epoch == epochs-1 || epoch < 10) {
             std::cout << "Epoch " << (epoch + 1) << "/" << epochs
-                      << " | LR: " << lr
+                      << " | LR: " << optimizer.getLearningRate()
                       << " | Loss: " << epoch_loss / X_train.rows()
                       << " | Acc: " << accuracy << "%\n";
         }
     }
+
+    auto end = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::microseconds>(end-start);
     
-    std::cout << "Training completed!\n";
+    std::cout << "Training completed at " << duration.count() << " \n";
     return 0;
 }

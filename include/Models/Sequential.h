@@ -138,6 +138,18 @@ public:
                  std::function<std::vector<double>(const std::vector<double>&, 
                                                    const std::vector<double>&)> grad_fn);
 
+    double train(
+        const Dataset& X_train,
+        const Dataset& y_train,
+        BaseOptim& optimizer,
+        size_t batch_size,
+        std::function<double(const std::vector<std::vector<double>>&, 
+                            const std::vector<std::vector<double>>&)> batch_loss_fn,
+        std::function<std::vector<std::vector<double>>(const std::vector<std::vector<double>>&, 
+                                                    const std::vector<std::vector<double>>&)> batch_grad_fn
+    );
+
+    
     void clearGradients();
         
     /**

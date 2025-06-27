@@ -82,7 +82,7 @@ double Sequential::train(const Dataset& X_train,
     for (auto it = loader.begin(); it != loader.end(); ++it) {
         Dataset batch = *it;
         const auto& batch_data = batch.getData();
-        auto batch_indices = it.getCurrentIndices();
+        auto batch_indices = it.getIndices();
         size_t current_batch_size = batch_data.size();
         
         // Process batch
@@ -109,6 +109,60 @@ double Sequential::train(const Dataset& X_train,
     
     return total_loss;
 }
+
+double Sequential::train(
+    const Dataset& X_train,
+    const Dataset& y_train,
+    BaseOptim& optimizer,
+    size_t batch_size,
+    std::function<double(const std::vector<std::vector<double>>&, 
+                         const std::vector<std::vector<double>>&)> batch_loss_fn,
+    std::function<std::vector<std::vector<double>>(const std::vector<std::vector<double>>&, 
+                                                   const std::vector<std::vector<double>>&)> batch_grad_fn)
+{
+    DataLoader loader(X_train, batch_size, true);
+    double total_loss = 0.0;
+    
+    for (auto it = loader.begin(); it != loader.end(); ++it) {
+        Dataset batch = *it;
+        const auto& batch_data = batch.getData();
+        auto batch_indices = it.getIndices();
+        size_t current_batch_size = batch_data.size();
+        
+        // Prepare batch inputs and labels
+        std::vector<std::vector<double>> batch_y;
+        batch_y.reserve(current_batch_size);
+        for (auto idx : batch_indices) {
+            batch_y.push_back(y_train[idx]);
+        }
+        
+        // Forward pass for entire batch
+        std::vector<std::vector<double>> batch_preds;
+        batch_preds.reserve(current_batch_size);
+        for (const auto& x : batch_data) {
+            batch_preds.push_back(forward(x));
+        }
+        
+        // Compute batch loss
+        double batch_loss = batch_loss_fn(batch_y, batch_preds);
+        total_loss += batch_loss;
+        
+        // Compute batch gradients
+        auto batch_grads = batch_grad_fn(batch_y, batch_preds);
+        
+        // Backward pass for each sample in batch
+        for (const auto& grad : batch_grads) {
+            backward(grad);
+        }
+        
+        // Update parameters
+        optimizer.step(getLayers(), current_batch_size);
+        optimizer.afterStep();
+    }
+    
+    return total_loss;
+}
+
 
 void Sequential::clearGradients() {
     std::vector<BaseLayer*> all_layers = this->getLayers();

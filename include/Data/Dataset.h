@@ -33,19 +33,24 @@ public:
                  bool has_header = false,
                  bool multiple_spaces = false);
                 
-    void loadBinary(const std::string& filename);
+    void loadBinary(const std::string& filename, bool skip_header = false);
 
     // Saving methods
-    void saveCSV(const std::string& filename, char delimiter = ',') const;
-    void saveBinary(const std::string& filename) const;
+    void saveCSV(const std::string& filename, 
+                 char delimiter = ',', 
+                 bool write_header = true
+    ) const;
+
+    void saveBinary(const std::string& filename, bool write_header = true) const;
 
     // Data inspection
     void head(size_t n_rows = 5) const;
     std::pair<size_t, size_t> shape() const;
+    void printShape() const;
     void describe() const;
 
     // Data manipulation
-    std::pair<Dataset, Dataset> splitFeaturesLabels() const;
+    std::pair<Dataset, Dataset> splitFeaturesLabels(int label_col = -1) const;
     Dataset selectRows(const std::vector<size_t>& indices) const;
     std::pair<Dataset, Dataset> trainTestSplit(double test_fraction,
                                                int stratify = -1, 

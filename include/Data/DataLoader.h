@@ -25,7 +25,7 @@ public:
     public:
         Iterator(const DataLoader& loader, size_t cursor);
         
-        std::vector<size_t> getCurrentIndices() const;
+        std::vector<size_t> getIndices() const;
 
         Dataset operator*() const;
         Iterator& operator++();
