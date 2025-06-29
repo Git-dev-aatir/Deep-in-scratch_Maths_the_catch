@@ -51,5 +51,3 @@ build.bat
 
 # Ignore dependency or package manager files (if applicable)
 conan.lock
-
-LICENSE

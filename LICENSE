@@ -1,0 +1,92 @@
+# LICENSE
+
+**The "Please Don't Sue Me And Just Copy This Code Wherever You Want" Public License**  
+*Version 0.42 (Because obviously)*
+
+## 📜 Preamble
+
+Congratulations! You've stumbled upon this neural network library, probably while procrastinating on your actual work or trying to avoid reading yet another 47-page Apache license that nobody really understands anyway. 
+
+This license exists because my friend lawyer (not yet a lawyer) has convinced the world that sharing code requires more paperwork than buying a house. Since we apparently live in a reality where "just use my code" isn't legally sufficient, here we are.
+
+## 🎭 Terms and Conditions
+
+### Article I: The "Do Whatever" Clause
+You are hereby granted permission to:
+- Copy this software (shocking, I know)
+- Modify it (please do, it probably needs it)
+- Distribute it (spread the chaos)
+- Use it commercially (make that money, honey)
+- Sublicense it (because why not add more lawyers?)
+
+**BUT** (because there's always a but)...
+
+### Article II: The "Don't Be That Person" Requirements
+
+If you use this software, you solemnly swear to:
+
+1. **Not claim you wrote it** - Your GitHub contribution graph is depressing enough without lies (still not depressing than mine).
+2. **Give credit where due** - A simple "based on the work by [Me]" won't kill you.
+3. **Not use it for evil** - This includes but is not limited to:
+   - Creating AI that judges people for their Spotify playlists
+   - Building recommendation systems that only suggest pineapple pizza
+   - Training models to write passive-aggressive code comments
+   - Any neural network designed to explain why cryptocurrency is the future or how JavaScript is the best language (it's shit, but necessary shit)
+
+### Article III: The "Expectation Management" Section
+
+This software is provided "AS IS" - which is legal speak for:
+- It might work
+- It might not work  
+- It might achieve consciousness and judge your life choices
+- The author is definitely not responsible if your neural network becomes sentient and starts a robot uprising
+
+### Article IV: The "Karma Clause" (Optional but Encouraged)
+
+If this software proves useful, the author humbly requests one of the following:
+- A brief moment of gratitude while you curse this code at 3 AM
+- A GitHub star (it's free and makes developers feel validated)
+- A positive mention in your project's README (fame is the currency of open source)
+- A pull request fixing that thing you noticed but were too polite to mention
+
+### Article V: The "Fine Print" That's Actually Readable
+
+- This license applies to all files in this repository unless specifically noted otherwise
+- If any part of this license is deemed unenforceable, the rest still applies (legal redundancy!)
+- This license is compatible with your sanity (unlike some others)
+- The version number is intentionally ridiculous and will remain so (probably)
+
+## 🤝 Warranty Disclaimer
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THIS SOFTWARE IS PROVIDED WITHOUT WARRANTY OF ANY KIND. The author makes no promises about:
+- Performance (it's neural networks, not magic)
+- Accuracy (garbage in, garbage out)
+- Your job security if this breaks in production
+- The meaning of life, the universe, or why neural networks work at all
+
+## 🏛️ Limitation of Liability
+
+IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR:
+- Direct damages (the obvious stuff)
+- Indirect damages (the sneaky stuff)
+- Consequential damages (the butterfly effect stuff)
+- Your boss finding out you copied this from GitHub
+- Existential crises caused by contemplating artificial intelligence
+- Time lost debugging gradient descent
+
+## 📞 Contact
+
+For questions about this license, please:
+1. Read it again (seriously, it's not that long)
+2. Check the FAQ (if one exists, which probably doesn't right now)
+3. Google or ChatGPT it (you were going to anyway)
+4. File an issue (but be nice about it)
+5. Accept that some things in life don't have answers
+
+**Remember**: This license is meant to protect both of us while keeping things simple. Be excellent to each other, and may your gradients always converge.
+
+*© 2025 - Licensed under the "Please Don't Sue Me And Just Copy This Code Wherever You Want" Public License v0.42*
+
+**P.S.** If you actually read this entire license, you deserve a cookie 🍪. Most people just scroll to the bottom anyway.
+
+**P.P.S.** I hope version 0.42 finally leads me to “the Answer to the Ultimate Question of Life, the Universe, and Everything”, because after making this repository I know for certain that making it was surely not the answer to properly utilizing my vacation (but it was still fun).
