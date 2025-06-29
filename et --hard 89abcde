@@ -1,0 +1,22 @@
+[33m6f3f7ee[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{0}: commit: final touch
+[33m9409c27[m HEAD@{1}: reset: moving to HEAD~1
+[33me3b9bca[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{2}: commit: added License
+[33m9409c27[m HEAD@{3}: commit: improved the Examples for better results and removed some bugs
+[33m11c73d7[m HEAD@{4}: commit: Added the Makefile that was ignored earlier
+[33m121c6cf[m HEAD@{5}: commit: updated README.md
+[33m7775fea[m HEAD@{6}: commit: improved the model to have batch_loss_functions also and improved some data loading and preprocessing
+[33maaa858b[m HEAD@{7}: commit: improved the model to have batch_loss_functions also and improved some data loading and preprocessing
+[33m411a32d[m HEAD@{8}: commit: changed the working of optimizer with learning rate schedulers and created a base class for optimizers
+[33m92c1413[m HEAD@{9}: commit: changed training method by introducing new Dataset and DataLoader classes and removing previous preprocessing and dataset functions, also changing whole traing of Sequential model and sgd optimizer (introduced lr decay and momentum)
+[33m6611b47[m HEAD@{10}: commit: completed the whole model training and working fine but needs some improvement
+[33m652b15c[m HEAD@{11}: commit: Added Optimizers and Sequential.h but not completed and needs change
+[33m7c01dbe[m HEAD@{12}: commit: changed README.md
+[33meb6b4a8[m HEAD@{13}: commit: added losses, initialization for parameters, and dense and activation layers. Also tested some purely linear data without any noise for a linear regression neuron
+[33m6098c1c[m HEAD@{14}: commit: added more preprocessing functions for correlation analysis, outlier removal, column removal, etc and preprocesses and saved the dataset as train_set and test_set using preprocessing.cpp code
+[33maf461cf[m HEAD@{15}: commit: added preprocessing module
+[33m44b7d06[m HEAD@{16}: commit: Added the READEME.md and updated Journey
+[33m658874a[m HEAD@{17}: commit: Added some helper functions for dataset and fixed splitFeaturesAndLabels() function
+[33me2c0323[m HEAD@{18}: commit: Removed include-src folder from Git tracking
+[33m74d1a87[m HEAD@{19}: commit: Removed Datasets folder from Git tracking
+[33me71b156[m HEAD@{20}: commit: Added dataset_utils.h with Template dataset functions for int, double and string datatypes
+[33m77e4ad3[m HEAD@{21}: clone: from https://github.com/Git-dev-aatir/Deep-in-scratch_Maths_the_catch
