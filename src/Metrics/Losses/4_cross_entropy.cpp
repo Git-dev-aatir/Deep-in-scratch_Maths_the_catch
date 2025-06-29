@@ -61,12 +61,12 @@ std::vector<double> cross_entropy_derivative(const std::vector<double>& y_true,
     if (from_logits) {
         std::vector<double> probs = softmax(y_pred);
         for (size_t i = 0; i < y_true.size(); ++i) {
-            grad[i] = probs[i] - y_true[i];  // Removed averaging
+            grad[i] = probs[i] - y_true[i];     // No averaging on number of classes
         }
     } else {
         for (size_t i = 0; i < y_true.size(); ++i) {
             double p = clamp(y_pred[i], eps, 1.0 - eps);
-            grad[i] = p - y_true[i];  // Removed averaging
+            grad[i] = p - y_true[i];           // No averaging on number of classes
             // grad[i] = -y_true[i] / p; // if last layer is sigmoid
         }
     }
@@ -105,6 +105,7 @@ std::vector<std::vector<double>> cross_entropy_derivative_batch(
             throw std::invalid_argument("Cross Entropy Derivative Batch: Size mismatch at index " + std::to_string(i));
         
         grads[i] = cross_entropy_derivative(y_true[i], y_pred[i], from_logits);
+        for (auto& ele : grads[i]) ele /= y_true.size();
     }
     return grads;
 }

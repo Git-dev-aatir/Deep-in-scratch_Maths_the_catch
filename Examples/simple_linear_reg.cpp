@@ -1,80 +1,104 @@
-#include <iostream>
-#include "../include/Models/Sequential.h"
-#include "../include/Layers/Layers.h"
-#include "../include/Optimizers/Optim.h"
-#include "../include/Metrics/Losses.h"
-#include "../include/Preprocessing/Dataset_utils.h"
+    #include <iostream>
+    #include <string>
+    #include <vector>
+    #include "Data/Dataset.h"
+    #include "Data/Preprocessing.h"
+    #include "Models/Sequential.h"
+    #include "Optimizers/SGD.h"
+    #include "Metrics/Losses.h"
+    #include "Utils/Scheduler.h"
+    #include "Utils/Activations.h"
 
-#define DATA_PATH "./Datasets/test_linear/"
+    #define DATA_PATH "Datasets/test_linear/"
 
-using namespace std; 
+    using namespace std; 
 
-// Simple Mean Squared Error loss and its derivative
-double Mse_loss(const std::vector<double>& y_true, const std::vector<double>& y_pred) {
-    return Losses::mse_loss(y_true, y_pred);
-}
+    // testing purely linear data with 3 features and no noise
+    int main () {
 
-std::vector<double> Mse_loss_derivative(const std::vector<double>& y_true, const std::vector<double>& y_pred) {
-    return Losses::mse_derivative(y_true, y_pred);
-}
+        Dataset X_train;
+        X_train.loadCSV(string(DATA_PATH) + "X_train.csv", ',');
+        Dataset y_train;
+        y_train.loadCSV(string(DATA_PATH) + "y_train.csv", ',');
+        Dataset X_test;
+        X_test.loadCSV(string(DATA_PATH) + "X_test.csv", ',');
+        Dataset y_test;
+        y_test.loadCSV(string(DATA_PATH) + "y_test.csv", ',');
 
-// testing purely linear data with 3 features and no noise
-int main () {
+        X_train.printShape();
+        y_train.printShape();
+        X_test.printShape();
+        y_test.printShape();
 
-    Dataset<double> X_train = loadDataset<double>(string(DATA_PATH) + "X_train.csv", ',');
-    Dataset<double> y_train = loadDataset<double>(string(DATA_PATH) + "y_train.csv", ',');
-    Dataset<double> X_test = loadDataset<double>(string(DATA_PATH) + "X_test.csv", ',');
-    Dataset<double> y_test = loadDataset<double>(string(DATA_PATH) + "y_test.csv", ',');
-    
-    // printDimensions(X_train);
-    // head(X_train, X_train.size());
+        Preprocessing::standardize(X_train);
+        Preprocessing::standardize(X_test);
 
-    // printDimensions(y_train);
-    // head(y_train, y_train.size());
 
-    // printDimensions(X_test);
-    // head(X_test);
+        // unsigned int hidden_units = 1;
+        Sequential model(
+            std::make_unique<DenseLayer>(X_train.cols(), 1)
+        );
 
-    // printDimensions(y_test);
-    // head(y_test);
-    // return 0;
+        model.initializeParameters(21);
 
-    // Create a simple model: Input -> Dense(1 unit) -> Sigmoid
-    Sequential model(
-        new DenseLayer(X_train[0].size(), 1)               // 1 input -> 1 output neuron
-    );
 
-    model.initializeParameters(); // Initialize weights and biases
+        size_t epochs = 50;
+        
+        // Create optimizer
+        const double base_lr = 0.1;
+        const size_t base_batch_size = 1;
+        const size_t batches_per_epoch = ceil(static_cast<double>(X_train.rows()) / base_batch_size);
+        const size_t total_steps = epochs * batches_per_epoch;
+        auto scheduler = Schedulers::step(10, 0.9);
+        SGD optimizer(
+            base_lr,      // learning_rate
+            0.9,          // momentum
+            base_batch_size,
+            scheduler   // LR scheduler
+        );
+        // optimizer.setGradientClip(0.1);
+        
+        for (size_t epoch = 0; epoch < epochs; ++epoch) {
+            
+            double epoch_loss = model.train(
+                X_train, 
+                y_train,
+                optimizer,
+                // [](const vector<double>& y_true, const vector<double>& y_pred) {
+                //     return Losses::cross_entropy_loss(y_true, y_pred, true);
+                // },
+                // [](const vector<double>& y_true, const vector<double>& y_pred) {
+                //     return Losses::cross_entropy_derivative(y_true, y_pred, true);
+                [](const vector<vector<double>>& y_true, const vector<vector<double>>& y_pred) {
+                    return Losses::mse_loss_batch(y_true, y_pred);
+                },
+                [](const vector<vector<double>>& y_true, const vector<vector<double>>& y_pred) {
+                    return Losses::mse_derivative_batch(y_true, y_pred);
+                },
+                21
+            );
+            
+            // Test evaluation
+            size_t correct = 0;
+            double test_loss = 0;
+            for (size_t i = 0; i < X_test.rows(); ++i) {
+                vector<double> output = model.forward(X_test[i]);
+                test_loss += Losses::mse_loss(y_test[i], output);
+            }
+            
+            // Print every 10 epochs
+            if (epoch % 10 == 0 || epoch == epochs-1 || epoch < 10) {
+                std::cout << "Epoch " << (epoch + 1) << "/" << epochs
+                        << " | LR: " << optimizer.getLearningRate()
+                        << " | Loss: " << epoch_loss 
+                        << " | Test_loss: " << test_loss / X_test.rows() << std::endl;
+            }
+        }
+        for (size_t i=0; i<X_test.rows(); ++i) {
+            std::cout << "Actual : " << y_test[i][0]; 
+            std::cout << "\t\t Predicted : " << model.forward(X_test[i])[0] << std::endl;
+        }
 
-    // Optimizer: Stochastic Gradient Descent (learning rate 0.1)
-    double lr = 0.01; 
-    SGD optimizer(lr);
 
-    // Train for 100 epochs
-    size_t epochs = 100;
-    for (size_t epoch = 0; epoch < epochs; ++epoch) {
-        double loss = model.train(X_train, y_train, Mse_loss, Mse_loss_derivative, &optimizer);
-        std::cout << "Epoch " << epoch + 1 << ", Loss: " << loss << std::endl;
+        return 0;
     }
-
-    // 5. Test the model
-    cout << "\nTesting the trained model:" << endl;
-    for (size_t i=0; i<X_test.size(); ++i) {
-        const vector<double> x = X_test[i];
-        vector<double> pred = model.forward(x);
-        cout << "Real value: " << y_test[i][0] << " -> Prediction: " << pred[0] << endl;
-    }
-
-    // 6. Print summary 
-    cout << "\nSummary of model \n";
-    model.summary();
-
-    // // 6. Print learned weights and biases
-    // cout << "\nLearned Weight: \n";
-    // head(model.getWeights());
-    // cout << "Learned Bias: " << model.getBiases()[0] << endl;
-    
-
-
-    return 0;
-}

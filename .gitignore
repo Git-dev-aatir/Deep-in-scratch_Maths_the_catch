@@ -30,6 +30,7 @@ Thumbs.db
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
+build.bat
 
 # Ignore generated documentation
 /doc/
@@ -50,3 +51,5 @@ cmake_install.cmake
 
 # Ignore dependency or package manager files (if applicable)
 conan.lock
+
+LICENSE

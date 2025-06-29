@@ -385,6 +385,52 @@ Dataset Dataset::transpose() const {
     return Dataset(transposed);
 }
 
+Dataset Dataset::reshape(size_t new_rows, size_t new_cols) const {
+    // Validate reshape dimensions
+    const size_t total_elements = num_rows * num_cols;
+    if (total_elements != new_rows * new_cols) {
+        std::ostringstream error_msg;
+        error_msg << "Reshape error: " << total_elements << " elements cannot be reshaped to "
+                  << new_rows << "x" << new_cols << " (" << new_rows * new_cols << " elements)";
+        throw std::invalid_argument(error_msg.str());
+    }
+
+    // Create new dataset with target dimensions
+    Dataset reshaped;
+    reshaped.num_rows = new_rows;
+    reshaped.num_cols = new_cols;
+    reshaped.data.resize(new_rows, std::vector<double>(new_cols));
+
+    // Flatten existing data (row-major order)
+    std::vector<double> flat_data;
+    flat_data.reserve(total_elements);
+    for (const auto& row : data) {
+        flat_data.insert(flat_data.end(), row.begin(), row.end());
+    }
+
+    // Populate new structure
+    size_t index = 0;
+    for (size_t i = 0; i < new_rows; ++i) {
+        for (size_t j = 0; j < new_cols; ++j) {
+            reshaped.data[i][j] = flat_data[index++];
+        }
+    }
+
+    return reshaped;
+}
+
+std::vector<double> Dataset::flatten() const {
+    std::vector<double> result;
+    result.reserve(num_rows * num_cols);
+    
+    for (const auto& row : data) {
+        result.insert(result.end(), row.begin(), row.end());
+    }
+    
+    return result;
+}
+
+
 void Dataset::toOneHot() {
     // Validate dataset has exactly one column
     if (num_cols != 1) {

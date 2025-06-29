@@ -5,8 +5,10 @@
 #include <stdexcept>
 #include <functional> 
 #include "Data/DataLoader.h"
-#include "../Layers/Layers.h"
-#include "../Optimizers/SGD.h"
+#include "Layers/Layers.h"
+#include "Optimizers/SGD.h"
+
+#define MANUAL_SEED 21
 
 // Note : Sequential takes ownership of all layers within it 
 //        and these layer pointers or layer shouldn't be used anywhere else
@@ -129,27 +131,41 @@ public:
      * @param grad_fn Gradient function (y_true, y_pred) -> vector<double>.
      * @return Total loss over the training set.
      */
-    double train(const Dataset& X_train,
-                 const Dataset& y_train,
-                 BaseOptim& optimizer,
-                 size_t batch_size,
-                 std::function<double(const std::vector<double>&, 
-                                      const std::vector<double>&)> loss_fn,
-                 std::function<std::vector<double>(const std::vector<double>&, 
-                                                   const std::vector<double>&)> grad_fn);
-
-    double train(
+    double train(                // function overload for single example loss 
         const Dataset& X_train,
         const Dataset& y_train,
         BaseOptim& optimizer,
-        size_t batch_size,
+        std::function<double(const std::vector<double>&, 
+                             const std::vector<double>&)> loss_fn,
+        std::function<std::vector<double>(const std::vector<double>&, 
+                                          const std::vector<double>&)> grad_fn,
+        unsigned int seed = MANUAL_SEED
+    );
+    
+    /**
+     * @brief Performs one training pass over the entire dataset.
+     * @param X_train Input features dataset.
+     * @param y_train Target labels dataset.
+     * @param optimizer Optimizer to use for weight updates.
+     * @param batch_size Size of each training batch.
+     * @param loss_fn Batch Loss function (y_true, y_pred) -> double.
+     * @param grad_fn Batch Gradient function (y_true, y_pred) -> vector<double>.
+     * @return Total loss over the training set.
+     */
+    double train(                 // function overload for batch loss 
+        const Dataset& X_train,
+        const Dataset& y_train,
+        BaseOptim& optimizer,
         std::function<double(const std::vector<std::vector<double>>&, 
                             const std::vector<std::vector<double>>&)> batch_loss_fn,
         std::function<std::vector<std::vector<double>>(const std::vector<std::vector<double>>&, 
-                                                    const std::vector<std::vector<double>>&)> batch_grad_fn
+                                                    const std::vector<std::vector<double>>&)> batch_grad_fn,
+        unsigned int seed = MANUAL_SEED
     );
 
-    
+    /**
+     * @brief Clear all cached gradients of all layers
+     */
     void clearGradients();
         
     /**

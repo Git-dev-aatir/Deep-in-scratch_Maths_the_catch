@@ -1,79 +1,79 @@
-#ifndef DENSELAYER_H
-#define DENSELAYER_H
+#pragma once 
 
 #include "BaseLayer.h"
-#include "../Utils/Initialization.h" // For parameter initialization methods
-#include <cassert>
-
-#define MANUAL_SEED 21
+#include "../Utils/Initialization.h"
+#include <cstddef>
+#include <vector>
 
 /**
- * @brief Dense (fully connected) layer class with gradient storage and weight initialization.
- *
- * This class represents a dense (fully connected) layer in a neural network, with 
- * support for forward and backward passes, gradient storage, and weight initialization.
- * It is used to compute the weighted sum of inputs, add biases, and apply an activation function.
- * The class also supports gradient-based optimization methods (e.g., gradient descent).
+ * @class DenseLayer
+ * @brief Fully connected neural network layer with configurable initialization
+ * 
+ * Implements a dense (fully connected) layer with forward/backward propagation,
+ * gradient storage, and multiple weight initialization strategies. Supports:
+ * - Various weight initialization methods (Xavier, He, etc.)
+ * - Batch and stochastic gradient descent
+ * - Activation-agnostic design (pair with activation layers)
  */
 class DenseLayer : public BaseLayer {
 private:
-    size_t input_size;                          ///< Number of input features.
-    size_t output_size;                         ///< Number of output neurons.
-    std::vector<std::vector<double>> weights;   ///< Weights matrix (size: input_size x output_size).
-    std::vector<double> biases;                 ///< Bias vector (size: output_size).
-    std::vector<std::vector<double>> grad_weights; ///< Gradient of weights (size: input_size x output_size).
-    std::vector<double> grad_biases;               ///< Gradient of biases (size: output_size).
-    std::vector<double> input_cache;               ///< Cached input values for backpropagation (size: input_size).
+    size_t input_size;                          ///< Number of input features
+    size_t output_size;                         ///< Number of output neurons
+    std::vector<std::vector<double>> weights;   ///< Weight matrix [input_size x output_size]
+    std::vector<double> biases;                 ///< Bias vector [output_size]
+    std::vector<std::vector<double>> grad_weights; ///< Weight gradients
+    std::vector<double> grad_biases;            ///< Bias gradients
+    std::vector<double> input_cache;            ///< Cached inputs for backpropagation
 
 public:
     /**
-     * @brief Constructor to initialize Dense layer dimensions and optionally initialize weights and biases.
-     *
-     * @param in_features Number of input features (neurons in the previous layer).
-     * @param out_features Number of output neurons in this layer.
-     * @param init_params Whether to initialize weights and biases (default: true).
+     * @brief Constructs a dense layer
+     * @param in_features Input dimension
+     * @param out_features Output dimension
+     * @param init_params Whether to initialize parameters (default=true)
      */
-    DenseLayer(size_t in_features, size_t out_features, bool init_params = true);
+    DenseLayer(size_t in_features, size_t out_features, bool init_params = false);
+
+    virtual ~DenseLayer() = default;  ///< Virtual destructor for polymorphism
 
     /**
-     * @brief Initializes weights using the specified initialization method.
-     *
-     * This function will initialize the weights using one of the predefined methods, 
-     * e.g., Xavier, He, or random initialization. The initialization method is passed 
-     * as a parameter, and the seed can be set for reproducibility.
-     *
-     * @param method Initialization method to use (e.g., Xavier, He).
-     * @param seed Seed for random number generation (default: 21).
-     * @param a Lower bound of the range for weight initialization (default: 0).
-     * @param b Upper bound of the range for weight initialization (default: 1.0).
-     * @param sparsity The sparsity of the weight matrix (default: 0.0).
-     * @param bias_value The value to initialize biases (default: 0.0).
+     * @brief Initializes weights using specified method
+     * @param method Initialization strategy
+     * @param seed RNG seed (default=DEFAULT_SEED)
+     * @param a Lower bound for uniform distribution
+     * @param b Upper bound for uniform distribution
+     * @param sparsity Fraction of weights to set to zero
      */
-    void initializeWeights(InitMethod method,
-                           unsigned int seed = MANUAL_SEED,
-                           double a = 0,
-                           double b = 1.0,
-                           double sparsity = 0.0,
-                           double bias_value = 0.0);
+    void initializeWeights(
+        InitMethod method,
+        unsigned int seed,
+        double a = 0,
+        double b = 1.0,
+        double sparsity = 0.0,
+        double constant_value = 0.0
+    );
 
     /**
-     * @brief Initializes biases using the specified initialization method.
-     *
-     * This function initializes the bias values using one of the predefined methods.
-     *
-     * @param method Initialization method for biases (default: zero initialization).
-     * @param seed Seed for random number generation (default: 21).
-     * @param a Lower bound of the range for bias initialization (default: 0).
-     * @param b Upper bound of the range for bias initialization (default: 1.0).
-     * @param sparsity The sparsity for bias initialization (default: 0.0).
-     * @param bias_value The value to initialize biases (default: 0.0).
+     * @brief Initializes biases using specified method
+     * @param method Initialization strategy
+     * @param seed RNG seed (default=DEFAULT_SEED)
+     * @param constant_value Value for constant initialization
+     * @param a Lower bound for uniform distribution
+     * @param b Upper bound for uniform distribution
+     * @param sparsity Fraction of biases to set to zero
      */
-    void initializeBiases(InitMethod method,
-                          unsigned int seed = MANUAL_SEED,
-                          double a = 0,
-                          double b = 1.0,
-                          double sparsity = 0.0,
-                          double bias_value = 0.0);
+    void initializeBiases(
+        InitMethod method,
+        unsigned int seed,
+        double a = 0,
+        double b = 1.0,
+        double sparsity = 0.0,
+        double constant_value = 0.0
+    );
+
+////////////////////
+// Core operations//
+////////////////////
 
     /**
      * @brief Forward pass through the dense layer.
@@ -97,6 +97,10 @@ public:
      * @return The gradient of the loss with respect to the input (size: input_size).
      */
     std::vector<double> backward(const std::vector<double>& grad_output) override;
+    
+//////////////////////
+// Utility functions//
+//////////////////////
 
     /**
      * @brief Prints a summary of the layer's parameters.
@@ -115,6 +119,20 @@ public:
     void clearGradients();
 
     /**
+     * @brief Returns the total number of parameters (weights + biases) in the layer.
+     *
+     * This function computes the total number of learnable parameters in the dense layer.
+     * It includes both the weights and biases.
+     *
+     * @return The total number of parameters in the layer.
+     */
+    size_t getParameterCount() const;
+
+//////////////
+// Debugging//
+//////////////
+
+    /**
      * @brief Prints the weights of the layer.
      *
      * This function prints the weight matrix of the layer.
@@ -128,30 +146,9 @@ public:
      */
     void printBiases() const;
 
-    /**
-     * @brief Returns the total number of parameters (weights + biases) in the layer.
-     *
-     * This function computes the total number of learnable parameters in the dense layer.
-     * It includes both the weights and biases.
-     *
-     * @return The total number of parameters in the layer.
-     */
-    size_t getParameterCount() const;
-
-    // Getters
-    /**
-     * @brief Gets the gradient of the weights.
-     * 
-     * @return A reference to the gradient of the weights (size: input_size x output_size).
-     */
-    const std::vector<std::vector<double>>& getGradWeights() const;
-
-    /**
-     * @brief Gets the gradient of the biases.
-     * 
-     * @return A reference to the gradient of the biases (size: output_size).
-     */
-    const std::vector<double>& getGradBiases() const;
+//////////////
+// Accessors//
+//////////////
 
     /**
      * @brief Gets the current weight matrix.
@@ -167,7 +164,24 @@ public:
      */
     const std::vector<double>& getBiases() const;
 
-    // Setters
+    /**
+     * @brief Gets the gradient of the weights.
+     * 
+     * @return A reference to the gradient of the weights (size: input_size x output_size).
+     */
+    const std::vector<std::vector<double>>& getGradWeights() const;
+    
+    /**
+     * @brief Gets the gradient of the biases.
+     * 
+     * @return A reference to the gradient of the biases (size: output_size).
+     */
+    const std::vector<double>& getGradBiases() const;
+
+/////////////
+// Mutators//
+/////////////
+    
     /**
      * @brief Sets the weights of the layer.
      *
@@ -175,7 +189,9 @@ public:
      *
      * @param new_weights The new weight matrix to set (size: input_size x output_size).
      */
-    void setWeights(const std::vector<std::vector<double>>& new_weights);
+    void setWeights(const std::vector<std::vector<double>>& new_weights); // copy
+
+    void setWeights(const std::vector<std::vector<double>>&& new_weights); // move
 
     /**
      * @brief Sets the biases of the layer.
@@ -184,7 +200,7 @@ public:
      *
      * @param new_biases The new bias vector to set (size: output_size).
      */
-    void setBiases(const std::vector<double>& new_biases);
-};
+    void setBiases(const std::vector<double>& new_biases); // copy 
 
-#endif // DENSELAYER_H
+    void setBiases(const std::vector<double>&& new_biases); // move
+};

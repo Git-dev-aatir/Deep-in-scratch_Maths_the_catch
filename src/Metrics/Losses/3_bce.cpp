@@ -80,6 +80,11 @@ std::vector<std::vector<double>> bce_derivative_batch(const std::vector<std::vec
     if (y_true.empty() || y_true.size() != y_pred.size())
         throw std::invalid_argument("BCE Derivative Batch: Size mismatch or empty batch.");
     
+    // size_t total_elements = 0;
+    // for (const auto& vec : y_true) {
+    //     total_elements += vec.size();
+    // }
+
     std::vector<std::vector<double>> grads(y_true.size());
     for (size_t i = 0; i < y_true.size(); ++i) {
         if (y_true[i].size() != y_pred[i].size() || y_true[i].empty())
@@ -87,6 +92,8 @@ std::vector<std::vector<double>> bce_derivative_batch(const std::vector<std::vec
         
         // Use per-sample derivative without additional scaling
         grads[i] = bce_derivative(y_true[i], y_pred[i], from_logits);
+
+        for (auto& ele : grads[i]) ele /= y_true.size();
     }
     return grads;
 }

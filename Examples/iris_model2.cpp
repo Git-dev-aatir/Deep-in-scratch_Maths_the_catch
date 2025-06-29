@@ -23,35 +23,30 @@ int main() {
 
 // ----------------------Converted-csv-to-binary-------------------------------
 
-    Dataset mnist_train;
-    mnist_train.loadCSV("Datasets/MNIST/mnist_train.csv", ',', true); // not uploaded in repo
-    Dataset mnist_test;
-    mnist_test.loadCSV("Datasets/MNIST/mnist_test.csv", ',', true); // you can test your own dataset
-
-    cout << "Training set : ";
-    mnist_train.printShape();
-    // mnist_train.head(1);
-
-    cout << "Testing set : "; 
-    mnist_test.printShape();
-    // mnist_test.head(1);
-
-    auto [X_train, y_train] = mnist_train.splitFeaturesLabels(0);
-    auto [X_test, y_test] = mnist_test.splitFeaturesLabels(0);
+    // Load dataset
+    Dataset iris;
+    iris.loadCSV("Datasets/iris/iris.data", ',', true);
     
-    y_test.describe();
-    y_train.describe();
-
-    // Normalize features
-    Preprocessing::minMaxNormalize(X_train);
-    Preprocessing::minMaxNormalize(X_test);
-
-    // Convert labels to one-hot
-    y_train.toOneHot();
+    // Inspect dataset
+    auto shape = iris.shape();
+    std::cout << "Dataset dimensions: " << shape.first << " rows x " << shape.second << " columns\n";
+    
+    // Train-test split with stratification
+    auto [train_set, test_set] = iris.trainTestSplit(0.2, iris.cols()-1, true);
+    
+    // Split features and labels
+    auto [X_train, y_train] = train_set.splitFeaturesLabels(4);
+    auto [X_test, y_test] = test_set.splitFeaturesLabels(4);
+    
+    // Standardize features
+    Preprocessing::standardize(X_train);
+    Preprocessing::standardize(X_test);
+    
     y_test.toOneHot();
+    y_train.toOneHot();
     
     // Build model
-    size_t hidden_unit1 = 18, hidden_unit2 = 16, hidden_unit3 = 16;  // Increased capacity
+    size_t hidden_unit1 = 4, hidden_unit2 = 4, hidden_unit3 = 4;  // Increased capacity
     Sequential model(
         std::make_unique<DenseLayer>(X_train.cols(), hidden_unit1),
         std::make_unique<ActivationLayer>(ActivationType::LEAKY_RELU),
@@ -64,14 +59,14 @@ int main() {
     model.initializeParameters(21);
     model.summary();
 
-    size_t epochs = 10;
+    size_t epochs = 35;
     
     // Create optimizer
     const double base_lr = 0.005;
     const size_t base_batch_size = 1;
     const size_t batches_per_epoch = ceil(static_cast<double>(X_train.rows()) / base_batch_size);
     const size_t total_steps = epochs * batches_per_epoch;
-    auto scheduler = Schedulers::cosine_warmup(1e-4, total_steps, total_steps/8);
+    auto scheduler = Schedulers::cosine_warmup(1e-4, total_steps, total_steps/4);
     // auto scheduler = Schedulers::step(8*batches_per_epoch, 0.9);
     SGD optimizer(
         base_lr, // / X_train.rows() * 32,      // learning_rate

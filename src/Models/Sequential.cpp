@@ -1,7 +1,6 @@
 #include "Models/Sequential.h"
 #include <iostream>
 #include <stdexcept>
-// #include <chrono>
 
 void Sequential::initializeParameters(unsigned int seed, double a, double b, double sparsity, double bias_value) {
     for (size_t i = 0; i < this->layers.size(); ++i) {
@@ -44,11 +43,6 @@ std::vector<double> Sequential::forward(const std::vector<double>& input) const 
 }
 
 std::vector<double> Sequential::backward(const std::vector<double>& grad_output) {
-    // Add debug print
-    // std::cout << "Backprop grad: ";
-    // for (auto g : grad_output) std::cout << g << " ";
-    // std::cout << "\n";
-    
     std::vector<double> grad = grad_output;
     for (auto it = this->layers.rbegin(); it != this->layers.rend(); ++it) {
         grad = (*it)->backward(grad);
@@ -70,13 +64,18 @@ void Sequential::summary() const {
 double Sequential::train(const Dataset& X_train,
                          const Dataset& y_train,
                          BaseOptim& optimizer,
-                         size_t batch_size,
                          std::function<double(const std::vector<double>&, 
                                               const std::vector<double>&)> loss_fn,
                          std::function<std::vector<double>(const std::vector<double>&, 
-                                                           const std::vector<double>&)> grad_fn)
-{
-    DataLoader loader(X_train, batch_size, true);
+                                                           const std::vector<double>&)> grad_fn,
+                         unsigned int seed
+) {
+    size_t batch_size = optimizer.getBatchSize();
+    if (batch_size == 0) {
+        batch_size = X_train.rows();
+        optimizer.setBatchSize(batch_size);
+    }
+    DataLoader loader(X_train, batch_size, true, seed);
     double total_loss = 0.0;
     
     for (auto it = loader.begin(); it != loader.end(); ++it) {
@@ -84,6 +83,9 @@ double Sequential::train(const Dataset& X_train,
         const auto& batch_data = batch.getData();
         auto batch_indices = it.getIndices();
         size_t current_batch_size = batch_data.size();
+
+        // clear gradient cache 
+        this->clearGradients();
         
         // Process batch
         for (size_t i = 0; i < current_batch_size; ++i) {
@@ -106,7 +108,6 @@ double Sequential::train(const Dataset& X_train,
         // Notify optimizer after step (for schedulers)
         optimizer.afterStep();
     }
-    
     return total_loss;
 }
 
@@ -114,13 +115,18 @@ double Sequential::train(
     const Dataset& X_train,
     const Dataset& y_train,
     BaseOptim& optimizer,
-    size_t batch_size,
     std::function<double(const std::vector<std::vector<double>>&, 
                          const std::vector<std::vector<double>>&)> batch_loss_fn,
     std::function<std::vector<std::vector<double>>(const std::vector<std::vector<double>>&, 
-                                                   const std::vector<std::vector<double>>&)> batch_grad_fn)
-{
-    DataLoader loader(X_train, batch_size, true);
+                                                   const std::vector<std::vector<double>>&)> batch_grad_fn,
+    unsigned int seed
+) {
+    size_t batch_size = optimizer.getBatchSize();
+    if (batch_size == 0) {
+        batch_size = X_train.rows();
+        optimizer.setBatchSize(batch_size);
+    }
+    DataLoader loader(X_train, batch_size, true, seed);
     double total_loss = 0.0;
     
     for (auto it = loader.begin(); it != loader.end(); ++it) {
@@ -135,6 +141,9 @@ double Sequential::train(
         for (auto idx : batch_indices) {
             batch_y.push_back(y_train[idx]);
         }
+
+        // clearing gradient cache
+        this->clearGradients();
         
         // Forward pass for entire batch
         std::vector<std::vector<double>> batch_preds;
@@ -144,8 +153,8 @@ double Sequential::train(
         }
         
         // Compute batch loss
-        double batch_loss = batch_loss_fn(batch_y, batch_preds);
-        total_loss += batch_loss;
+        double batch_loss = batch_loss_fn(batch_y, batch_preds); 
+        total_loss += batch_loss * current_batch_size;
         
         // Compute batch gradients
         auto batch_grads = batch_grad_fn(batch_y, batch_preds);
@@ -154,13 +163,25 @@ double Sequential::train(
         for (const auto& grad : batch_grads) {
             backward(grad);
         }
+
+        // // After backward pass in train():
+        // double max_grad = 0;
+        // for (auto layer : getLayers()) {
+        //     if (auto dense = dynamic_cast<DenseLayer*>(layer)) {
+        //         for (const auto& row : dense->getGradWeights()) {
+        //             for (double g : row) {
+        //                 if (fabs(g) > max_grad) max_grad = fabs(g);
+        //             }
+        //         }
+        //     }
+        // }
+        // std::cout << "Max Gradient: " << max_grad << std::endl;
         
         // Update parameters
         optimizer.step(getLayers(), current_batch_size);
         optimizer.afterStep();
-    }
-    
-    return total_loss;
+    } 
+    return total_loss / X_train.rows();
 }
 
 

@@ -2,9 +2,12 @@
 #include "Layers/Layers.h"
 #include <stdexcept>
 #include <iostream>
+#include <algorithm>
 
-SGD::SGD(double lr, double momentum, std::function<double(double, size_t)> scheduler) 
-    : learning_rate(lr), initial_lr(lr), momentum(momentum), lr_scheduler(scheduler) {}
+SGD::SGD(double lr, double momentum,
+         size_t batch_size, std::function<double(double, size_t)> scheduler) 
+    : learning_rate(lr), initial_lr(lr), momentum(momentum), 
+      batch_size(batch_size), lr_scheduler(scheduler) {}
 
 void SGD::afterStep() {
     step_count++;
@@ -63,7 +66,7 @@ void SGD::updateLayer(BaseLayer* layer, size_t batch_size) {
         }
     }
 
-    const double lr = this->learning_rate / batch_size;
+    const double lr = this->learning_rate;
     
     // Create updated parameters
     auto new_weights = weights;
@@ -72,26 +75,34 @@ void SGD::updateLayer(BaseLayer* layer, size_t batch_size) {
     // Update weights
     for (size_t i = 0; i < output_size; ++i) {
         for (size_t j = 0; j < input_size; ++j) {
+            double g;
+            if (clip_value_ != 0.0)
+                g = std::clamp(grad_weights[i][j], -clip_value_, clip_value_);
+            else g = grad_weights[i][j];
             if (momentum > 0) {
                 velocity_weights[layer][i][j] = 
                     momentum * velocity_weights[layer][i][j] + 
-                    lr * grad_weights[i][j];
+                    lr * g;
                 new_weights[i][j] -= velocity_weights[layer][i][j];
             } else {
-                new_weights[i][j] -= lr * grad_weights[i][j];
+                new_weights[i][j] -= lr * g;
             }
         }
     }
 
     // Update biases
     for (size_t i = 0; i < new_biases.size(); ++i) {
+        double g;
+            if (clip_value_ != 0.0)
+                g = std::clamp(grad_biases[i], -clip_value_, clip_value_);
+            else g = grad_biases[i];
         if (momentum > 0) {
             velocity_biases[layer][i] = 
                 momentum * velocity_biases[layer][i] + 
-                lr * grad_biases[i];
+                lr * g;
             new_biases[i] -= velocity_biases[layer][i];
         } else {
-            new_biases[i] -= lr * grad_biases[i];
+            new_biases[i] -= lr * g;
         }
     }
 

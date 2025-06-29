@@ -1,100 +1,117 @@
-# C++ Project with Makefile Build System
+# Neural Network Library (C++)
 
-## Overview
-This project provides a robust build system using Make for C++ projects. It features:
-- Automated source file discovery
-- Dependency tracking
-- Cross-platform compatibility (Unix/Git Bash/MSYS2)
-- Optimized build configuration
+## 📝 Overview  
+This project implements a comprehensive neural network library in C++ with support for:
+- Layer management (Dense, Activation)
+- Optimization algorithms (SGD with momentum)
+- Data handling (Dataset, DataLoader)
+- Preprocessing utilities
+- Loss functions and metrics
+- Learning rate scheduling
 
-## Build Instructions
+## 🔑 Key Features  
+- **Layers**: Dense, ReLU, Sigmoid, Tanh, Softmax  
+- **Optimizers**: SGD with momentum and LR scheduling  
+- **Data Handling**: Batch loading, shuffling, preprocessing  
+- **Initialization**: Xavier, He, LeCun methods  
+- **Losses**: MSE, MAE, Cross-Entropy, Hinge  
+- **Utilities**: Activation functions, weight initialization  
 
-### Prerequisites
-- GCC/G++ compiler with C++17 support
-- Make utility
-- Unix-like environment (Linux/macOS) or Windows with:
-  - Git Bash, or
-  - MSYS2
-
-### Building the Library
+## 📁 Folder Structure  
 ```
+project-root/
+├── include/               # Header files
+│   ├── Data/              # Dataset, DataLoader, Preprocessing
+│   ├── Layers/            # Layer implementations
+│   ├── Metrics/           # Loss functions and metrics
+│   ├── Models/            # Sequential model
+│   ├── Optimizers/        # Optimization algorithms
+│   └── Utils/             # Utility functions
+├── src/                   # Implementation files
+│   ├── Data/              # Dataset/DataLoader implementations
+│   ├── Layers/            # Layer implementations
+│   ├── Metrics/           # Loss function implementations
+│   ├── Models/            # Sequential model implementation
+│   ├── Optimizers/        # Optimizer implementations
+│   └── Utils/             # Utility implementations
+├── Journey/               # Documentation
+│   ├── Data/              # Data-related docs
+│   ├── Layers/            # Layer docs
+│   ├── Metrics/           # Metrics docs
+│   ├── Models/            # Model docs
+│   ├── Optimizers/        # Optimizer docs
+│   └── Utils/             # Utility docs
+├── Examples/              # Usage examples
+├── Makefile               # Build configuration
+└── README.md              # This file
+```
+
+## 🛠️ Building  
+1. **Prerequisites**: C++17 compiler (GCC/Clang)  
+2. **Build**:  
+```bash
 make
 ```
-- Compiles all source files in `src/` directory
-- Generates object files in `build/` directory
-- Preserves directory structure from source
 
-### Cleaning Build Artifacts
+## ▶️ Running Examples  
+To compile and run an example file:  
+```bash
+make run FILE=Examples/your_example.cpp
 ```
+Replace `your_example.cpp` with your example file path relative to project root.
+
+## 🧹 Cleaning Build Artifacts  
+```bash
 make clean
 ```
-- Removes the entire `build/` directory
 
-### Running Examples
-```
-make run FILE=path/to/example.cpp
-```
-- Removes the entire `build/` directory
+## ⚠️ Note  
+All file paths should be given relative to the project root directory.
 
-### Running Examples
-```
-make run FILE=path/to/example.cpp
-```
-- Compiles and executes a specific example file
-- Example: `make run FILE=Examples/iris_classifier.cpp`
+## 🚀 Example Usage  
+```cpp
+#include "Models/Sequential.h"
+#include "Layers/Layers.h"
+#include "Optimizers/SGD.h"
+#include "Metrics/Losses.h"
 
-## Project Structure
-```
-├── include/ # Header files (.h, .hpp)
-├── src/ # Source files (.cpp)
-├── build/ # Build artifacts (auto-generated)
-│ ├── *.o # Object files
-│ ├── *.d # Dependency files
-│ └── example.exe # Compiled examples
-├── Makefile # Build system configuration
-└── README.md # Project documentation
-```
+int main() {
+    // Create network
+    Sequential model(
+        new DenseLayer(784, 256),
+        new ActivationLayer(ActivationType::RELU),
+        new DenseLayer(256, 10),
+        new ActivationLayer(ActivationType::SOFTMAX)
+    );
 
+    // Initialize parameters
+    model.initializeParameters(42);
 
-## Key Features
-1. **Smart Dependency Tracking**  
-   Automatically generates and includes dependency files (.d)
+    // Create optimizer
+    SGD optim(0.01, 0.9); // LR=0.01, momentum=0.9
 
-2. **Optimized Compilation**  
-   Uses `-O2` optimization and strict warnings (`-Wall -Wextra`)
-
-3. **Cross-Platform Support**  
-   Compatible with:
-   - Linux/macOS terminals
-   - Git Bash on Windows
-   - MSYS2 environments
-
-4. **Structured Builds**  
-   Preserves source directory structure in build output
-
-5. **Temporary File Management**  
-   Uses system temp directory (`~/AppData/Local/Temp` on Windows)
-
-## Customization
-Modify these variables in the Makefile as needed:
-
-```
-CXX := g++ # Compiler
-CXXFLAGS := -std=c++17 -Wall # Compiler flags
-SRC_DIR := src # Source directory
-BUILD_DIR := build # Output directory
+    // Training loop
+    for (int epoch = 0; epoch < 10; epoch++) {
+        double loss = model.train(X_train, y_train, optim, 64,
+                                  Losses::cross_entropy_loss,
+                                  Losses::cross_entropy_derivative);
+        std::cout << "Epoch " << epoch << " loss: " << loss << "\n";
+    }
+    return 0;
+}
 ```
 
+## 📦 Dependencies  
+- C++17 standard library  
+- STL components only (no external dependencies)  
 
-## Troubleshooting
-**Common Issues:**
-- **"FILE variable not set"**:  
-  Specify example path: `make run FILE=path/to/example.cpp`
-- **Missing dependencies**:  
-  Install build-essential (Linux) or MinGW (Windows)
-- **Permission errors**:  
-  Run `chmod +x` on scripts if needed
+## 📚 Documentation  
+Comprehensive documentation available in the `Journey/` directory:  
+- Layer implementations  
+- Optimization algorithms  
+- Data handling  
+- Utility functions  
+- Model architecture  
 
-## License
-This build system is open-source. Modify and use as needed for your projects.
-
+## 📄 License  
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.

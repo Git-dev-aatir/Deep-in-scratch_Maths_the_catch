@@ -1,10 +1,15 @@
-#include "../../include/Data/DataLoader.h"
+#include "Data/DataLoader.h"
 
-DataLoader::DataLoader(const Dataset& ds, size_t batch_size, bool shuffle)
-    : dataset(ds), batch_size(batch_size), shuffle(shuffle), 
-      rng(std::random_device{}()) {
-    reset();
+DataLoader::DataLoader(const Dataset& ds, size_t batch_size, bool shuffle, unsigned int seed)
+    : dataset(ds), batch_size(batch_size), shuffle(shuffle) {
+    if (seed == 0) {
+        rng.seed(std::random_device{}());
+    } else {
+        rng.seed(seed);
+    }
+    this->reset();
 }
+
 
 void DataLoader::reset() {
     indices.resize(dataset.rows());

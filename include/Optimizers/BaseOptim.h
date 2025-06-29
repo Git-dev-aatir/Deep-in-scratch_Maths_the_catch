@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Layers/BaseLayer.h"
+#include "Layers/BaseLayer.h"
 #include <vector>
 #include <memory>
 
@@ -11,7 +11,7 @@ class BaseOptim {
 public:
     virtual ~BaseOptim() = default;
     
-    /**
+    /**     
      * @brief Update parameters for a set of layers.
      * @param layers Vector of layer pointers to update.
      * @param batch_size Batch size used in the current step.
@@ -37,4 +37,12 @@ public:
      * @return Current learning rate value.
      */
     virtual double getLearningRate() const = 0;
+
+    /**
+     * @brief Get the mini batch size.
+     * @return Current learning rate value.
+     */
+    virtual size_t getBatchSize() const = 0;
+
+    virtual void setBatchSize(size_t new_batch_size) = 0;
 };
