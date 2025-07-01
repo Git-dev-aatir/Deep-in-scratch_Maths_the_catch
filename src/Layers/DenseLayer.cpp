@@ -189,7 +189,7 @@ const std::vector<double>& DenseLayer::getBiases() const {
 }
 
 // Setters with enhanced validation
-void DenseLayer::setWeights(const std::vector<std::vector<double>>& new_weights)
+void DenseLayer::setWeights(std::vector<std::vector<double>>& new_weights)
 {
     if (new_weights.size() != output_size) {
         throw std::invalid_argument("DenseLayer::setWeights: Row count mismatch");
@@ -202,7 +202,7 @@ void DenseLayer::setWeights(const std::vector<std::vector<double>>& new_weights)
     weights = new_weights;
 }
 
-void DenseLayer::setWeights(const std::vector<std::vector<double>>&& new_weights)
+void DenseLayer::setWeights(std::vector<std::vector<double>>&& new_weights)
 {
     if (new_weights.size() != output_size) {
         throw std::invalid_argument("DenseLayer::setWeights: Row count mismatch");
@@ -215,7 +215,7 @@ void DenseLayer::setWeights(const std::vector<std::vector<double>>&& new_weights
     weights = std::move(new_weights);
 }
 
-void DenseLayer::setBiases(const std::vector<double>& new_biases)
+void DenseLayer::setBiases(std::vector<double>& new_biases)  // copy
 {
     if (new_biases.size() != output_size) {
         throw std::invalid_argument("DenseLayer::setBiases: Size mismatch");
@@ -223,7 +223,7 @@ void DenseLayer::setBiases(const std::vector<double>& new_biases)
     biases = new_biases;
 }
 
-void DenseLayer::setBiases(const std::vector<double>&& new_biases)
+void DenseLayer::setBiases(std::vector<double>&& new_biases)  // move
 {
     if (new_biases.size() != output_size) {
         throw std::invalid_argument("DenseLayer::setBiases: Size mismatch");

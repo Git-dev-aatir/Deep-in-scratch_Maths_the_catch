@@ -189,9 +189,9 @@ public:
      *
      * @param new_weights The new weight matrix to set (size: input_size x output_size).
      */
-    void setWeights(const std::vector<std::vector<double>>& new_weights); // copy
+    void setWeights(std::vector<std::vector<double>>& new_weights); // copy
 
-    void setWeights(const std::vector<std::vector<double>>&& new_weights); // move
+    void setWeights(std::vector<std::vector<double>>&& new_weights); // move
 
     /**
      * @brief Sets the biases of the layer.
@@ -200,7 +200,7 @@ public:
      *
      * @param new_biases The new bias vector to set (size: output_size).
      */
-    void setBiases(const std::vector<double>& new_biases); // copy 
+    void setBiases(std::vector<double>& new_biases); // copy 
 
-    void setBiases(const std::vector<double>&& new_biases); // move
+    void setBiases(std::vector<double>&& new_biases); // move
 };

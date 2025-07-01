@@ -108,7 +108,7 @@ double Sequential::train(const Dataset& X_train,
         // Notify optimizer after step (for schedulers)
         optimizer.afterStep();
     }
-    return total_loss;
+    return total_loss / X_train.rows();
 }
 
 double Sequential::train(
@@ -163,19 +163,6 @@ double Sequential::train(
         for (const auto& grad : batch_grads) {
             backward(grad);
         }
-
-        // // After backward pass in train():
-        // double max_grad = 0;
-        // for (auto layer : getLayers()) {
-        //     if (auto dense = dynamic_cast<DenseLayer*>(layer)) {
-        //         for (const auto& row : dense->getGradWeights()) {
-        //             for (double g : row) {
-        //                 if (fabs(g) > max_grad) max_grad = fabs(g);
-        //             }
-        //         }
-        //     }
-        // }
-        // std::cout << "Max Gradient: " << max_grad << std::endl;
         
         // Update parameters
         optimizer.step(getLayers(), current_batch_size);
